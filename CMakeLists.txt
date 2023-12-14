@@ -42,6 +42,7 @@ set(${PROJECT_NAME}_HEADERS
 
 # executables link the shared library and are installed
 set(${PROJECT_NAME}_EXECUTABLES
+	iou_cat
         )
 
 # tests link the static library and are not installed
