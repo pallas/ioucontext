@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 #ifndef IOUCONTEXT_TODO_SIGJMP_H
 #define IOUCONTEXT_TODO_SIGJMP_H
+#include "defortified_setjmp.h"
 
 #include "jump_queue.h"
-
-#include <setjmp.h>
 
 #ifdef __cplusplus
 extern "C" {

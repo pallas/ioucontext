@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 #ifndef IOUCONTEXT_REACTOR_INTERNAL_H
 #define IOUCONTEXT_REACTOR_INTERNAL_H
+#include "defortified_setjmp.h"
+
 #include "reactor.h"
 
 #include "jump_queue.h"
 #include "timespec.h"
 
 #include <liburing.h>
-#include <setjmp.h>
+
 
 #ifdef __cplusplus
 extern "C" {
