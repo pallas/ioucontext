@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: MIT
 #define _GNU_SOURCE
 
-#include "fiber.h"
-#include "macros.h"
-#include "operations.h"
-#include "reactor.h"
-#include "timespec.h"
-#include "sockaddr.h"
+#include <ioucontext/ioucontext.h>
 
 #include <assert.h>
 #include <fcntl.h>

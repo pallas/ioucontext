@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 #define _GNU_SOURCE
 
-#include "fiber.h"
-#include "macros.h"
-#include "operations.h"
-#include "reactor.h"
+#include <ioucontext/ioucontext.h>
 
 #include <fcntl.h>
 #include <sched.h>

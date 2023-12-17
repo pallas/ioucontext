@@ -33,6 +33,7 @@ set(${PROJECT_NAME}_OBJECTS
 # headers are installed
 set(${PROJECT_NAME}_HEADERS
 	fiber
+	ioucontext
 	macros
 	operations
 	reactor
@@ -60,6 +61,8 @@ check_include_file(valgrind/memcheck.h HAVE_MEMCHECK_H)
 if (HAVE_MEMCHECK_H)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MEMCHECK_H)
 endif()
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library(${PROJECT_NAME}-static STATIC $<TARGET_OBJECTS:${PROJECT_NAME}>)
@@ -91,7 +94,7 @@ foreach(executable ${${PROJECT_NAME}_EXECUTABLES})
 endforeach(executable)
 
 foreach(header ${${PROJECT_NAME}_HEADERS})
-        install(FILES ${header}.h DESTINATION "include")
+        install(FILES ${header}.h DESTINATION "include/${PROJECT_NAME}/")
 endforeach(header)
 
 enable_testing()
