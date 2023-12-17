@@ -18,14 +18,13 @@ extern "C" {
 typedef struct reactor_s {
     struct io_uring ring;
     jump_queue_t todos;
-    sigjmp_buf core;
+    sigjmp_buf *runner;
     stack_t stack;
     void *cookie;
     reactor_cookie_eat_t cookie_eat;
     int result;
-    unsigned sqs, cqs;
+    unsigned sqes, cqes;
     int reserved;
-    bool running;
 } reactor_t;
 
 void reactor_enter_core(reactor_t *);
@@ -35,6 +34,8 @@ void reactor_promise_impatient(reactor_t *, struct io_uring_sqe *, struct timesp
 void reactor_schedule(reactor_t *, jump_chain_t *);
 struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
 void reactor_reserve_sqes(reactor_t *, size_t);
+unsigned reactor_inflight(const reactor_t *);
+bool reactor_todos(const reactor_t *);
 
 #ifdef __cplusplus
 }

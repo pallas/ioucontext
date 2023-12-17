@@ -45,13 +45,12 @@ reactor_set(reactor_t * reactor) {
     TRY(io_uring_ring_dontfork, &reactor->ring);
 
     jump_queue_reset(&reactor->todos);
-    explicit_bzero(&reactor->core, sizeof reactor->core);
+    reactor->runner = NULL;
     reactor->stack = stack_get_signal();
     reactor->cookie = NULL;
     reactor->cookie_eat = NULL;
     reactor->result = 0;
-    reactor->sqs = reactor->cqs = reactor->reserved = 0;
-    reactor->running = false;
+    reactor->sqes = reactor->cqes = reactor->reserved = 0;
 }
 
 reactor_t *
@@ -112,10 +111,54 @@ reactor_cookie_jar(reactor_t * reactor, void *cookie, reactor_cookie_eat_t eat) 
 
 static void make_reactor_key() { EXPECT(thrd_success, tss_create, &reactor_key, (void(*)())reactor_put); }
 
+static unsigned
+reactor_cqes(reactor_t * reactor) {
+    assert(reactor);
+
+    if (!io_uring_cq_ready(&reactor->ring)) {
+        io_uring_submit_and_get_events(&reactor->ring);
+        if (!io_uring_cq_ready(&reactor->ring))
+            return 0;
+    }
+
+    jump_chain_t * todo = NULL;
+    unsigned base = reactor->cqes;
+
+    do {
+        struct io_uring_cqe * cqe;
+        TRY(io_uring_peek_cqe, &reactor->ring, &cqe);
+        assert(cqe);
+
+        ++reactor->cqes;
+        reactor->result = cqe->res;
+        todo = (jump_chain_t*)io_uring_cqe_get_data(cqe);
+
+    } while (!todo && io_uring_cq_ready(&reactor->ring));
+
+    unsigned delta = reactor->cqes - base;
+
+    assert(delta > 0);
+    io_uring_cq_advance(&reactor->ring, delta);
+
+    if (todo)
+        jump_invoke(todo);
+
+    return delta;
+}
+
 void
 reactor_enter_core(reactor_t * reactor) {
-    assert(reactor_running(reactor));
-    siglongjmp(reactor->core, true);
+    while (reactor_runnable(reactor)) {
+        reactor_cqes(reactor);
+
+        while (!jump_queue_empty(&reactor->todos) && io_uring_sq_space_left(&reactor->ring))
+            jump_invoke(jump_queue_dequeue(&reactor->todos));
+
+        io_uring_submit_and_wait(&reactor->ring, 1);
+    }
+
+    if (reactor->runner)
+        siglongjmp(*reactor->runner, true);
 }
 
 void
@@ -159,7 +202,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     assert(todo->fun);
     assert(!todo->next);
 
-    if (reactor_running(reactor) && io_uring_sq_space_left(&reactor->ring)) {
+    if (io_uring_sq_space_left(&reactor->ring)) {
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_nop(sqe);
         io_uring_sqe_set_data(sqe, (void*)todo);
@@ -168,23 +211,6 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     }
 }
 
-static void
-reactor_cqe(reactor_t * reactor) {
-    assert(reactor);
-    ++reactor->cqs;
-
-    struct io_uring_cqe * cqe;
-    TRY(io_uring_peek_cqe, &reactor->ring, &cqe);
-    assert(cqe);
-
-    jump_chain_t * todo = (jump_chain_t*)io_uring_cqe_get_data(cqe);
-    reactor->result = cqe->res;
-
-    io_uring_cqe_seen(&reactor->ring, cqe);
-
-    if (todo)
-        jump_invoke(todo);
-}
 
 static void
 reactor_defer(reactor_t * reactor) {
@@ -228,7 +254,7 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
 struct io_uring_sqe *
 reactor_sqe(reactor_t * reactor) {
     assert(reactor);
-    ++reactor->sqs;
+    ++reactor->sqes;
 
     if (!reactor->reserved)
         reactor_reserve_sqes(reactor, 1);
@@ -237,30 +263,25 @@ reactor_sqe(reactor_t * reactor) {
     return io_uring_get_sqe(&reactor->ring);
 }
 
-bool reactor_running(const reactor_t * reactor) { return reactor->running; }
+bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
+unsigned reactor_inflight(const reactor_t * reactor) { return reactor->sqes - reactor->cqes; }
+bool reactor_todos(const reactor_t * reactor) { return !jump_queue_empty(&reactor->todos); }
+bool reactor_runnable(const reactor_t * reactor) { return reactor_inflight(reactor) > 0 || reactor_todos(reactor); }
 
 void
 reactor_run(reactor_t * reactor) {
     assert(reactor);
     assert(!reactor_running(reactor));
 
-    reactor->running = true;
+    if (reactor_runnable(reactor)) {
+        sigjmp_buf runner;
+        reactor->runner = &runner;
 
-    sigsetjmp(reactor->core, false);
-    while (reactor->sqs != reactor->cqs || !jump_queue_empty(&reactor->todos)) {
+        if (!sigsetjmp(*reactor->runner, false))
+            reactor_enter_core(reactor);
 
-        while (io_uring_cq_ready(&reactor->ring))
-            reactor_cqe(reactor);
-
-        if (jump_queue_empty(&reactor->todos))
-            io_uring_submit_and_wait(&reactor->ring, 1);
-        else if (io_uring_sq_space_left(&reactor->ring))
-            jump_invoke(jump_queue_dequeue(&reactor->todos));
-        else if (!io_uring_cq_ready(&reactor->ring))
-            TRY(io_uring_submit_and_get_events, &reactor->ring);
+        reactor->runner = NULL;
     }
-
-    reactor->running = false;
 }
 
 //

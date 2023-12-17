@@ -13,6 +13,7 @@ typedef struct reactor_s reactor_t;
 
 reactor_t * reactor_get();
 void reactor_run(reactor_t *);
+bool reactor_runnable(const reactor_t *);
 bool reactor_running(const reactor_t *);
 
 typedef void (*reactor_cookie_eat_t)(void *cookie);
