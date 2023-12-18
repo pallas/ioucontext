@@ -43,6 +43,7 @@ signal_handler(reactor_t * reactor, sigset_t *mask) {
         if (TRY(iou_read, reactor, sfd, &si, sizeof si) < sizeof si)
             abort();
     } while (!sigismember(mask, si.ssi_signo));
+    TRY(sigprocmask, SIG_UNBLOCK, mask, NULL);
 
     iou_close(reactor, sfd);
 
