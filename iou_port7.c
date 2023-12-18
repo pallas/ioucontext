@@ -40,19 +40,19 @@ signal_handler(reactor_t * reactor, sigset_t *mask) {
     struct signalfd_siginfo si;
     explicit_bzero(&si, sizeof si);
     do {
-        if (TRY(io_read, reactor, sfd, &si, sizeof si) < sizeof si)
+        if (TRY(iou_read, reactor, sfd, &si, sizeof si) < sizeof si)
             abort();
     } while (!sigismember(mask, si.ssi_signo));
 
-    io_close(reactor, sfd);
+    iou_close(reactor, sfd);
 
     cookie_t *cookie = (cookie_t*)reactor_cookie(reactor);
 
     fd_t *cancelation;
     LIST_FOREACH(cancelation, &cookie->cancelations, entries) {
         int fd = cancelation->fd;
-        io_printf(reactor, STDERR_FILENO, "cancel fd %d\n", fd);
-        io_cancel_fd_all(reactor, cancelation->fd);
+        iou_printf(reactor, STDERR_FILENO, "cancel fd %d\n", fd);
+        iou_cancel_fd_all(reactor, cancelation->fd);
     }
 }
 
@@ -92,31 +92,31 @@ udp_service(reactor_t * reactor, const char * name, uint16_t port) {
 
     char s[sockaddr_address_size];
     if (sockaddr_unparse((struct sockaddr*)&ss, s, sizeof s))
-        io_printf(reactor, STDERR_FILENO, "udp starting on %s port %d\n", s, port);
+        iou_printf(reactor, STDERR_FILENO, "udp starting on %s port %d\n", s, port);
 
-    int fd = TRY(io_socket, reactor, ss.ss_family, SOCK_DGRAM, 0);
+    int fd = TRY(iou_socket, reactor, ss.ss_family, SOCK_DGRAM, 0);
 
     fd_t cancelation = { .fd = fd, };
     LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
-    io_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
+    iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
     setsockint(fd, SO_REUSEADDR, true);
     TRY(bind, fd, (struct sockaddr *)&ss, sizeof ss);
 
-    while (io_poll_in(reactor, fd, timespec_block)) {
+    while (iou_poll_in(reactor, fd, timespec_block)) {
         char buf[65535];
-        int n = TRY(io_recvfrom, reactor, fd, buf, sizeof buf, 0, (struct sockaddr *)&ss, sizeof ss);
+        int n = TRY(iou_recvfrom, reactor, fd, buf, sizeof buf, 0, (struct sockaddr *)&ss, sizeof ss);
         if (sockaddr_unparse((struct sockaddr*)&ss, s, sizeof s))
-            io_printf(reactor, STDERR_FILENO, "udp recv %d bytes from %s\n", n, s);
-        n = TRY(io_sendto, reactor, fd, buf, n, 0, (struct sockaddr *)&ss, sizeof ss);
+            iou_printf(reactor, STDERR_FILENO, "udp recv %d bytes from %s\n", n, s);
+        n = TRY(iou_sendto, reactor, fd, buf, n, 0, (struct sockaddr *)&ss, sizeof ss);
     }
 
     LIST_REMOVE(&cancelation, entries);
-    io_printf(reactor, STDERR_FILENO, "remove %p\n", &cancelation);
+    iou_printf(reactor, STDERR_FILENO, "remove %p\n", &cancelation);
     if (LIST_EMPTY(&((cookie_t*)reactor_cookie(reactor))->cancelations))
         kill(0, SIGHUP);
 
-    TRY(io_close, reactor, fd);
+    TRY(iou_close, reactor, fd);
 }
 
 void
@@ -127,13 +127,13 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
 
     char s[sockaddr_address_size];
     if (sockaddr_unparse((struct sockaddr*)&ss, s, sizeof s))
-        io_printf(reactor, STDERR_FILENO, "tcp starting on %s port %d\n", s, port);
+        iou_printf(reactor, STDERR_FILENO, "tcp starting on %s port %d\n", s, port);
 
-    int fd = TRY(io_socket, reactor, ss.ss_family, SOCK_STREAM, 0);
+    int fd = TRY(iou_socket, reactor, ss.ss_family, SOCK_STREAM, 0);
 
     fd_t cancelation = { .fd = fd, };
     LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
-    io_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
+    iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
     setsockint(fd, SO_REUSEADDR, true);
     TRY(bind, fd, (struct sockaddr *)&ss, sizeof ss);
@@ -141,22 +141,22 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
 
     while (true) {
         socklen_t len = sizeof ss;
-        int afd = io_accept(reactor, fd, (struct sockaddr *)&ss, &len);
+        int afd = iou_accept(reactor, fd, (struct sockaddr *)&ss, &len);
         if (afd < 0)
             break;
 
         if (sockaddr_unparse((struct sockaddr*)&ss, s, sizeof s))
-            io_printf(reactor, STDERR_FILENO, "tcp accept %s port %d\n", s, port);
+            iou_printf(reactor, STDERR_FILENO, "tcp accept %s port %d\n", s, port);
 
         reactor_fiber(handler, reactor, afd);
     }
 
     LIST_REMOVE(&cancelation, entries);
-    io_printf(reactor, STDERR_FILENO, "remove %p\n", &cancelation);
+    iou_printf(reactor, STDERR_FILENO, "remove %p\n", &cancelation);
     if (LIST_EMPTY(&((cookie_t*)reactor_cookie(reactor))->cancelations))
         kill(0, SIGHUP);
 
-    TRY(io_close, reactor, fd);
+    TRY(iou_close, reactor, fd);
 }
 
 void
@@ -172,29 +172,29 @@ tcp_handler(reactor_t * reactor, int fd) {
     if (sndbuf > fcntl(pipes[0], F_GETPIPE_SZ))
         fcntl(pipes[0], F_SETPIPE_SZ, sndbuf);
 
-    io_printf(reactor, STDERR_FILENO, "handle fd=%d send=%d recv=%d\n", fd, rcvbuf, sndbuf);
+    iou_printf(reactor, STDERR_FILENO, "handle fd=%d send=%d recv=%d\n", fd, rcvbuf, sndbuf);
 
     while (true) {
-        ssize_t n = io_splice(reactor, fd, pipes[1], rcvbuf);
+        ssize_t n = iou_splice(reactor, fd, pipes[1], rcvbuf);
         if (n <= 0)
             break;
-        io_printf(reactor, STDERR_FILENO, "fd %d splice in %zd bytes\n", fd, n);
+        iou_printf(reactor, STDERR_FILENO, "fd %d splice in %zd bytes\n", fd, n);
 
-        n = io_splice_all(reactor, pipes[0], fd, n);
+        n = iou_splice_all(reactor, pipes[0], fd, n);
         if (n <= 0)
             break;
-        io_printf(reactor, STDERR_FILENO, "fd %d splice out %zd bytes\n", fd, n);
+        iou_printf(reactor, STDERR_FILENO, "fd %d splice out %zd bytes\n", fd, n);
     }
 
-    io_printf(reactor, STDERR_FILENO, "fd %d close\n", fd);
+    iou_printf(reactor, STDERR_FILENO, "fd %d close\n", fd);
 
-    io_shutdown_read(reactor, fd);
-    TRY(io_close, reactor, pipes[1]);
+    iou_shutdown_read(reactor, fd);
+    TRY(iou_close, reactor, pipes[1]);
 
-    TRY(io_close, reactor, pipes[0]);
-    io_shutdown_write(reactor, fd);
+    TRY(iou_close, reactor, pipes[0]);
+    iou_shutdown_write(reactor, fd);
 
-    TRY(io_close, reactor, fd);
+    TRY(iou_close, reactor, fd);
 }
 
 int

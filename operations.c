@@ -13,7 +13,7 @@
 #include <netinet/in.h>
 
 int
-io_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen) {
+iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -24,7 +24,7 @@ io_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen
 }
 
 void
-io_barrier(reactor_t * reactor) {
+iou_barrier(reactor_t * reactor) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -34,7 +34,7 @@ io_barrier(reactor_t * reactor) {
 }
 
 void
-io_cancel_fd_all(reactor_t * reactor, int fd) {
+iou_cancel_fd_all(reactor_t * reactor, int fd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -43,7 +43,7 @@ io_cancel_fd_all(reactor_t * reactor, int fd) {
 }
 
 void
-io_cancel_fd_any(reactor_t * reactor, int fd) {
+iou_cancel_fd_any(reactor_t * reactor, int fd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -52,7 +52,7 @@ io_cancel_fd_any(reactor_t * reactor, int fd) {
 }
 
 int
-io_close(reactor_t * reactor, int fd) {
+iou_close(reactor_t * reactor, int fd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -63,7 +63,7 @@ io_close(reactor_t * reactor, int fd) {
 }
 
 int
-io_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -74,17 +74,17 @@ io_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen
 }
 
 int
-io_exchange(reactor_t * reactor, const char *oldpath, const char *newpath) {
-    return io_exchangeat(reactor, AT_FDCWD, oldpath, newpath);
+iou_exchange(reactor_t * reactor, const char *oldpath, const char *newpath) {
+    return iou_exchangeat(reactor, AT_FDCWD, oldpath, newpath);
 }
 
 int
-io_exchangeat(reactor_t * reactor, int dirfd, const char *oldpath, const char *newpath) {
-    return io_renameat(reactor, dirfd, oldpath, dirfd, newpath, RENAME_EXCHANGE);
+iou_exchangeat(reactor_t * reactor, int dirfd, const char *oldpath, const char *newpath) {
+    return iou_renameat(reactor, dirfd, oldpath, dirfd, newpath, RENAME_EXCHANGE);
 }
 
 int
-io_fadvise(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
+iou_fadvise(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -95,7 +95,7 @@ io_fadvise(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
 }
 
 int
-io_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
+iou_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -106,7 +106,7 @@ io_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
 }
 
 int
-io_fdatasync(reactor_t * reactor, int fd) {
+iou_fdatasync(reactor_t * reactor, int fd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -117,7 +117,7 @@ io_fdatasync(reactor_t * reactor, int fd) {
 }
 
 int
-io_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t size) {
+iou_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t size) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -128,7 +128,7 @@ io_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t 
 }
 
 void
-io_flush(reactor_t * reactor) {
+iou_flush(reactor_t * reactor) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -138,7 +138,7 @@ io_flush(reactor_t * reactor) {
 }
 
 int
-io_fsetxattr(reactor_t * reactor, int fd, const char *name, const void *value, size_t size, int flags) {
+iou_fsetxattr(reactor_t * reactor, int fd, const char *name, const void *value, size_t size, int flags) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -149,7 +149,7 @@ io_fsetxattr(reactor_t * reactor, int fd, const char *name, const void *value, s
 }
 
 int
-io_fsync(reactor_t * reactor, int fd) {
+iou_fsync(reactor_t * reactor, int fd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -160,7 +160,7 @@ io_fsync(reactor_t * reactor, int fd) {
 }
 
 int
-io_getxattr(reactor_t * reactor, const char *path, const char *name, void *value, size_t size) {
+iou_getxattr(reactor_t * reactor, const char *path, const char *name, void *value, size_t size) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -171,11 +171,11 @@ io_getxattr(reactor_t * reactor, const char *path, const char *name, void *value
 }
 
 int
-io_link(reactor_t * reactor, const char *oldpath, const char *newpath) {
-    return io_linkat(reactor, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+iou_link(reactor_t * reactor, const char *oldpath, const char *newpath) {
+    return iou_linkat(reactor, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
 }
 
-int io_linkat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) {
+int iou_linkat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) {
     assert(reactor);
 
     if (!oldpath || !*oldpath)
@@ -189,7 +189,7 @@ int io_linkat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdir
 }
 
 int
-io_madvise(reactor_t * reactor, void *addr, size_t len, int advice) {
+iou_madvise(reactor_t * reactor, void *addr, size_t len, int advice) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -200,12 +200,12 @@ io_madvise(reactor_t * reactor, void *addr, size_t len, int advice) {
 }
 
 int
-io_mkdir(reactor_t * reactor, const char *pathname, mode_t mode) {
-    return io_mkdirat(reactor, AT_FDCWD, pathname, mode);
+iou_mkdir(reactor_t * reactor, const char *pathname, mode_t mode) {
+    return iou_mkdirat(reactor, AT_FDCWD, pathname, mode);
 }
 
 int
-io_mkdirat(reactor_t * reactor, int dirfd, const char *pathname, mode_t mode) {
+iou_mkdirat(reactor_t * reactor, int dirfd, const char *pathname, mode_t mode) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -216,12 +216,12 @@ io_mkdirat(reactor_t * reactor, int dirfd, const char *pathname, mode_t mode) {
 }
 
 int
-io_open(reactor_t * reactor, const char *pathname, int flags, mode_t mode) {
-    return io_openat(reactor, AT_FDCWD, pathname, flags, mode);
+iou_open(reactor_t * reactor, const char *pathname, int flags, mode_t mode) {
+    return iou_openat(reactor, AT_FDCWD, pathname, flags, mode);
 }
 
 int
-io_openat(reactor_t * reactor, int dirfd, const char *pathname, int flags, mode_t mode) {
+iou_openat(reactor_t * reactor, int dirfd, const char *pathname, int flags, mode_t mode) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -232,7 +232,7 @@ io_openat(reactor_t * reactor, int dirfd, const char *pathname, int flags, mode_
 }
 
 static bool
-io_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec delta) {
+iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec delta) {
     assert(reactor);
 
     if (timespec_future(normalize_timespec(delta))) {
@@ -252,27 +252,27 @@ io_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec d
 }
 
 
-bool io_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) { return io_poll_mask(reactor, fd, POLLRDHUP, delta); }
-bool io_poll_in(reactor_t * reactor, int fd, const struct timespec delta) { return io_poll_mask(reactor, fd, POLLIN, delta); }
-bool io_poll_out(reactor_t * reactor, int fd, const struct timespec delta) { return io_poll_mask(reactor, fd, POLLOUT, delta); }
+bool iou_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLRDHUP, delta); }
+bool iou_poll_in(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLIN, delta); }
+bool iou_poll_out(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLOUT, delta); }
 
 int
-io_printf(reactor_t * reactor, int fd, const char *format, ...) {
+iou_printf(reactor_t * reactor, int fd, const char *format, ...) {
     int result;
     va_list args;
     va_start(args, format);
-    result = io_vprintf(reactor, fd, format, args);
+    result = iou_vprintf(reactor, fd, format, args);
     va_end(args);
     return result;
 }
 
 ssize_t
-io_read(reactor_t * reactor, int fildes, void *buf, size_t nbytes) {
-    return io_read_offset(reactor, fildes, buf, nbytes, -1);
+iou_read(reactor_t * reactor, int fildes, void *buf, size_t nbytes) {
+    return iou_read_offset(reactor, fildes, buf, nbytes, -1);
 }
 
 ssize_t
-io_read_offset(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offset) {
+iou_read_offset(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offset) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -283,12 +283,12 @@ io_read_offset(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t 
 }
 
 ssize_t
-io_recv(reactor_t * reactor, int socket, void *buffer, size_t length, int flags) {
-    return io_recvfrom(reactor, socket, buffer, length, flags, NULL, 0);
+iou_recv(reactor_t * reactor, int socket, void *buffer, size_t length, int flags) {
+    return iou_recvfrom(reactor, socket, buffer, length, flags, NULL, 0);
 }
 
 ssize_t
-io_recvfrom(reactor_t * reactor, int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t address_len) {
+iou_recvfrom(reactor_t * reactor, int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t address_len) {
     assert(reactor);
 
     struct iovec iov = {
@@ -311,17 +311,17 @@ io_recvfrom(reactor_t * reactor, int socket, void *buffer, size_t length, int fl
 }
 
 int
-io_rename(reactor_t * reactor, const char *oldpath, const char *newpath) {
-    return io_renameat(reactor, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+iou_rename(reactor_t * reactor, const char *oldpath, const char *newpath) {
+    return iou_renameat(reactor, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
 }
 
 int
-io_rename_noreplace(reactor_t * reactor, const char *oldpath, const char *newpath) {
-    return io_renameat(reactor, AT_FDCWD, oldpath, AT_FDCWD, newpath, RENAME_NOREPLACE);
+iou_rename_noreplace(reactor_t * reactor, const char *oldpath, const char *newpath) {
+    return iou_renameat(reactor, AT_FDCWD, oldpath, AT_FDCWD, newpath, RENAME_NOREPLACE);
 }
 
 int
-io_renameat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags) {
+iou_renameat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -332,12 +332,12 @@ io_renameat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirfd
 }
 
 int
-io_rmdir(reactor_t * reactor, const char *pathname) {
-    return io_rmdirat(reactor, AT_FDCWD, pathname);
+iou_rmdir(reactor_t * reactor, const char *pathname) {
+    return iou_rmdirat(reactor, AT_FDCWD, pathname);
 }
 
 int
-io_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
+iou_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -348,12 +348,12 @@ io_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
 }
 
 ssize_t
-io_send(reactor_t * reactor, int socket, const void *buffer, size_t length, int flags) {
-    return io_sendto(reactor, socket, buffer, length, flags, NULL, 0);
+iou_send(reactor_t * reactor, int socket, const void *buffer, size_t length, int flags) {
+    return iou_sendto(reactor, socket, buffer, length, flags, NULL, 0);
 }
 
 ssize_t
-io_sendto(reactor_t * reactor, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len) {
+iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len) {
     assert(reactor);
 
     struct iovec iov = {
@@ -376,7 +376,7 @@ io_sendto(reactor_t * reactor, int socket, const void *message, size_t length, i
 }
 
 int
-io_setxattr(reactor_t * reactor, const char *path, const char *name, const void *value, size_t size, int flags) {
+iou_setxattr(reactor_t * reactor, const char *path, const char *name, const void *value, size_t size, int flags) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -387,7 +387,7 @@ io_setxattr(reactor_t * reactor, const char *path, const char *name, const void 
 }
 
 int
-io_shutdown(reactor_t * reactor, int sockfd) {
+iou_shutdown(reactor_t * reactor, int sockfd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -398,7 +398,7 @@ io_shutdown(reactor_t * reactor, int sockfd) {
 }
 
 int
-io_shutdown_read(reactor_t * reactor, int sockfd) {
+iou_shutdown_read(reactor_t * reactor, int sockfd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -409,7 +409,7 @@ io_shutdown_read(reactor_t * reactor, int sockfd) {
 }
 
 int
-io_shutdown_write(reactor_t * reactor, int sockfd) {
+iou_shutdown_write(reactor_t * reactor, int sockfd) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -420,7 +420,7 @@ io_shutdown_write(reactor_t * reactor, int sockfd) {
 }
 
 struct timespec
-io_sleep(reactor_t * reactor, const struct timespec delta) {
+iou_sleep(reactor_t * reactor, const struct timespec delta) {
     assert(reactor);
 
     struct timespec now;
@@ -430,7 +430,7 @@ io_sleep(reactor_t * reactor, const struct timespec delta) {
         .tv_nsec = now.tv_nsec + delta.tv_nsec,
     });
 
-    if (io_sleep_absolute(reactor, when))
+    if (iou_sleep_absolute(reactor, when))
         return (struct timespec){ .tv_sec = 0, .tv_nsec = 0 };
 
     TRY(clock_gettime, CLOCK_BOOTTIME, &now);
@@ -446,7 +446,7 @@ io_sleep(reactor_t * reactor, const struct timespec delta) {
 }
 
 bool
-io_sleep_absolute(reactor_t * reactor, const struct timespec when) {
+iou_sleep_absolute(reactor_t * reactor, const struct timespec when) {
     assert(reactor);
 
     const struct timespec ts = normalize_timespec(when);
@@ -472,7 +472,7 @@ io_sleep_absolute(reactor_t * reactor, const struct timespec when) {
 }
 
 int
-io_socket(reactor_t * reactor, int domain, int type, int protocol) {
+iou_socket(reactor_t * reactor, int domain, int type, int protocol) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -483,16 +483,16 @@ io_socket(reactor_t * reactor, int domain, int type, int protocol) {
 }
 
 ssize_t
-io_splice(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
-    return io_splice_offset(reactor, fd_in, NULL, fd_out, NULL, len);
+iou_splice(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
+    return iou_splice_offset(reactor, fd_in, NULL, fd_out, NULL, len);
 }
 
 ssize_t
-io_splice_all(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
+iou_splice_all(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
     ssize_t bytes = 0;
 
     while (bytes < len) {
-        ssize_t n = io_splice(reactor, fd_in, fd_out, len - bytes);
+        ssize_t n = iou_splice(reactor, fd_in, fd_out, len - bytes);
         if (n < 0)
             return n;
         bytes += n;
@@ -502,7 +502,7 @@ io_splice_all(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
 }
 
 ssize_t
-io_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len) {
+iou_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -513,12 +513,12 @@ io_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off_
 }
 
 int
-io_statx(reactor_t * reactor, const char *pathname, struct statx *statxbuf) {
-    return io_statxat(reactor, AT_FDCWD, pathname, 0, STATX_BASIC_STATS, statxbuf);
+iou_statx(reactor_t * reactor, const char *pathname, struct statx *statxbuf) {
+    return iou_statxat(reactor, AT_FDCWD, pathname, 0, STATX_BASIC_STATS, statxbuf);
 }
 
 int
-io_statxat(reactor_t * reactor, int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf) {
+iou_statxat(reactor_t * reactor, int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -529,17 +529,17 @@ io_statxat(reactor_t * reactor, int dirfd, const char *pathname, int flags, unsi
 }
 
 int
-io_statxfd(reactor_t * reactor, int fd, struct statx *statxbuf) {
-    return io_statxat(reactor, fd, "", AT_EMPTY_PATH, STATX_BASIC_STATS, statxbuf);
+iou_statxfd(reactor_t * reactor, int fd, struct statx *statxbuf) {
+    return iou_statxat(reactor, fd, "", AT_EMPTY_PATH, STATX_BASIC_STATS, statxbuf);
 }
 
 int
-io_symlink(reactor_t * reactor, const char *path1, const char *path2) {
-    return io_symlinkat(reactor, path1, AT_FDCWD, path2);
+iou_symlink(reactor_t * reactor, const char *path1, const char *path2) {
+    return iou_symlinkat(reactor, path1, AT_FDCWD, path2);
 }
 
 int
-io_symlinkat(reactor_t * reactor, const char *path1, int fd, const char *path2) {
+iou_symlinkat(reactor_t * reactor, const char *path1, int fd, const char *path2) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -550,7 +550,7 @@ io_symlinkat(reactor_t * reactor, const char *path1, int fd, const char *path2) 
 }
 
 int
-io_sync_file_range(reactor_t * reactor, int fd, off_t offset, off_t nbytes, bool wait) {
+iou_sync_file_range(reactor_t * reactor, int fd, off_t offset, off_t nbytes, bool wait) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -563,7 +563,7 @@ io_sync_file_range(reactor_t * reactor, int fd, off_t offset, off_t nbytes, bool
 }
 
 ssize_t
-io_tee(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
+iou_tee(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -574,12 +574,12 @@ io_tee(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
 }
 
 int
-io_unlink(reactor_t * reactor, const char *pathname) {
-    return io_unlinkat(reactor, AT_FDCWD, pathname);
+iou_unlink(reactor_t * reactor, const char *pathname) {
+    return iou_unlinkat(reactor, AT_FDCWD, pathname);
 }
 
 int
-io_unlinkat(reactor_t * reactor, int dirfd, const char *pathname) {
+iou_unlinkat(reactor_t * reactor, int dirfd, const char *pathname) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -589,30 +589,30 @@ io_unlinkat(reactor_t * reactor, int dirfd, const char *pathname) {
     return reactor->result;
 }
 
-typedef struct _io_vprintf_cookie_s {
+typedef struct _iou_vprintf_cookie_s {
     reactor_t * reactor;
     int fd;
-} _io_vprintf_cookie_t;
+} _iou_vprintf_cookie_t;
 
 static
-ssize_t _io_vprintf_write(void *_cookie, const char *buf, size_t size) {
-    _io_vprintf_cookie_t *cookie = (_io_vprintf_cookie_t*)_cookie;
-    int n = io_write(cookie->reactor, cookie->fd, buf, size);
+ssize_t _iou_vprintf_write(void *_cookie, const char *buf, size_t size) {
+    _iou_vprintf_cookie_t *cookie = (_iou_vprintf_cookie_t*)_cookie;
+    int n = iou_write(cookie->reactor, cookie->fd, buf, size);
     return n < 0 ? 0 : n;
 }
 
-static const cookie_io_functions_t _io_vprintf_cookie_io_functions = {
-    .write = _io_vprintf_write,
+static const cookie_io_functions_t _iou_vprintf_cookie_io_functions = {
+    .write = _iou_vprintf_write,
 };
 
 int
-io_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
+iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
     assert(reactor);
-    _io_vprintf_cookie_t cookie = {
+    _iou_vprintf_cookie_t cookie = {
         .reactor = reactor,
         .fd = fd,
     };
-    FILE *file = fopencookie(&cookie, "w", _io_vprintf_cookie_io_functions);
+    FILE *file = fopencookie(&cookie, "w", _iou_vprintf_cookie_io_functions);
     int result = vfprintf(file, format, args);
     fflush(file);
     fclose(file);
@@ -620,11 +620,11 @@ io_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
 }
 
 ssize_t
-io_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
+iou_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
     ssize_t out = 0;
 
     while (out < nbytes) {
-        ssize_t n = io_write_offset(reactor, fildes, buf + out, nbytes - out, -1);
+        ssize_t n = iou_write_offset(reactor, fildes, buf + out, nbytes - out, -1);
         if (n < 0)
             return n;
         out += n;
@@ -634,7 +634,7 @@ io_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
 }
 
 ssize_t
-io_write_offset(reactor_t * reactor, int fildes, const void *buf, size_t nbytes, off_t offset) {
+iou_write_offset(reactor_t * reactor, int fildes, const void *buf, size_t nbytes, off_t offset) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
@@ -645,7 +645,7 @@ io_write_offset(reactor_t * reactor, int fildes, const void *buf, size_t nbytes,
 }
 
 void
-io_yield(reactor_t * reactor) {
+iou_yield(reactor_t * reactor) {
     assert(reactor);
 
     if (!io_uring_cq_ready(&reactor->ring)) {

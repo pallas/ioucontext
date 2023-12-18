@@ -31,11 +31,11 @@ source(reactor_t * reactor, int from, int to, int efd) {
     int pipe_buf_size = min(max_pipe(from), max_pipe(to));
 
     if (!isatty(from))
-        io_fadvise(reactor, from, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED);
+        iou_fadvise(reactor, from, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED);
 
     int64_t bytes; // must be signed
-    while ((bytes = io_splice(reactor, from, to, pipe_buf_size)) > 0)
-        TRY(io_write, reactor, efd, &bytes, sizeof bytes);
+    while ((bytes = iou_splice(reactor, from, to, pipe_buf_size)) > 0)
+        TRY(iou_write, reactor, efd, &bytes, sizeof bytes);
 
     return bytes;
 }
@@ -48,12 +48,12 @@ drain(reactor_t * reactor, int from, int to, int efd) {
         fcntl(to, F_SETFL, ~O_APPEND & fcntl(to, F_GETFL));
 
     uint64_t bytes;
-    while (io_read(reactor, efd, &bytes, sizeof bytes) > 0 && bytes != efd_eof) {
+    while (iou_read(reactor, efd, &bytes, sizeof bytes) > 0 && bytes != efd_eof) {
         while (bytes > 0) {
-            int n = io_splice(reactor, from, to, bytes);
+            int n = iou_splice(reactor, from, to, bytes);
             if (n <= 0) {
-                TRY(io_close, reactor, from);
-                io_read(reactor, efd, &bytes, sizeof bytes);
+                TRY(iou_close, reactor, from);
+                iou_read(reactor, efd, &bytes, sizeof bytes);
                 return;
             }
             bytes -= n;
@@ -77,15 +77,15 @@ cat(reactor_t * reactor, int argc, const char *argv[]) {
             if (source(reactor, STDIN_FILENO, pipes[1], efd))
                 break;
         } else {
-            int fd = TRY(io_open, reactor, argv[i], O_RDONLY, 0);
+            int fd = TRY(iou_open, reactor, argv[i], O_RDONLY, 0);
             if (source(reactor, fd, pipes[1], efd))
                 break;
-            TRY(io_close, reactor, fd);
+            TRY(iou_close, reactor, fd);
         }
     }
 
     uint64_t bytes = efd_eof;
-    TRY(io_write, reactor, efd, &bytes, sizeof bytes);
+    TRY(iou_write, reactor, efd, &bytes, sizeof bytes);
 }
 
 int
