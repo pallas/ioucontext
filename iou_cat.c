@@ -47,8 +47,8 @@ drain(reactor_t * reactor, int from, int to, int efd) {
     if (isatty(to))
         fcntl(to, F_SETFL, ~O_APPEND & fcntl(to, F_GETFL));
 
-    uint64_t bytes;
-    while (iou_read(reactor, efd, &bytes, sizeof bytes) > 0 && bytes != efd_eof) {
+    uint64_t bytes = 0;
+    while (iou_read(reactor, efd, &bytes, sizeof bytes) == sizeof bytes && bytes != efd_eof) {
         while (bytes > 0) {
             int n = iou_splice(reactor, from, to, bytes);
             if (n <= 0) {
