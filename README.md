@@ -24,12 +24,16 @@ Fibers are created via `ucontext` but context-switching occurs via
 wise to modify the process signal mask after any fiber has been created,
 whether or not it has run yet.
 
-Operations may only be invoked when running inside of a fiber.  Requests
-that can not be immediately submitted to the underlying `io_uring` will be
-deferred onto a wait-queue.  On completion, operations return to the calling
-fiber directly.  Thus, fibers are written procedurally but will
-coöperatively context-switch during operations.  Error codes are typically
-returned as negative values.
+Operations that can not be immediately submitted to the underlying
+`io_uring` will be deferred onto a wait-queue.  On completion, operations
+return to the calling fiber directly.  Thus, fibers are written procedurally
+but will coöperatively context-switch during operations.  Error codes are
+typically returned as negative values.
+
+Operations may be invoked outside of a fiber but may return prior to the
+reactor completing all pending work.  In that case, `reactor_runnable` will
+be true and an invocation of `reactor_run` will be required to clear the
+work.
 
 Reactors can store a user-data `cookie` and an optional destructor via
 `reactor_cookie_jar`.  When the reactor is torn down, the cookie will be
