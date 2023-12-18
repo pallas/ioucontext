@@ -124,16 +124,14 @@ reactor_cqes(reactor_t * reactor) {
     jump_chain_t * todo = NULL;
     unsigned base = reactor->cqes;
 
-    do {
-        struct io_uring_cqe * cqe;
-        TRY(io_uring_peek_cqe, &reactor->ring, &cqe);
-        assert(cqe);
-
+    unsigned head;
+    struct io_uring_cqe * cqe;
+    io_uring_for_each_cqe(&reactor->ring, head, cqe) {
         ++reactor->cqes;
         reactor->result = cqe->res;
-        todo = (jump_chain_t*)io_uring_cqe_get_data(cqe);
-
-    } while (!todo && io_uring_cq_ready(&reactor->ring));
+        if ((todo = (jump_chain_t*)io_uring_cqe_get_data(cqe)))
+            break;
+    }
 
     unsigned delta = reactor->cqes - base;
 
