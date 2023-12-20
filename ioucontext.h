@@ -2,6 +2,7 @@
 #ifndef IOUCONTEXT_H
 #define IOUCONTEXT_H
 
+#include "arena.h"
 #include "fiber.h"
 #include "macros.h"
 #include "operations.h"
