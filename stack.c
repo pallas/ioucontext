@@ -42,19 +42,35 @@ bool stack_growsdown(volatile uintptr_t p, ...) {
     return (uintptr_t)&p > stack_pointer(p);
 }
 
+static void * ptr_mask(void * p, uintptr_t m) { return (void*)( m & (uintptr_t)p); }
+
 void *
-stack_alloca(stack_t *s, size_t size) {
-    if (UNLIKELY(s->ss_size < size))
+stack_alloca(stack_t *s, size_t size, size_t align) {
+    assert(align > 0);
+
+    uintptr_t mask = align - 1;
+    assert(0 == (align & mask));
+
+    if (UNLIKELY(s->ss_size < size + align))
         return NULL;
 
+    void * top = s->ss_sp + s->ss_size;
+    void * bottom = s->ss_sp;
+
+    void * data;
     if (stack_growsdown(0)) {
-        s->ss_size -= size;
-        return s->ss_sp + s->ss_size;
+        data = ptr_mask(top - size, ~mask);
+        assert(bottom <= data);
+        s->ss_size = data - bottom;
     } else {
-        s->ss_size -= size;
-        s->ss_sp += size;
-        return s->ss_sp - size;
+        data = ptr_mask(bottom + align, ~mask);
+        assert(data < top - size);
+        s->ss_sp = data + size;
+        s->ss_size = top - s->ss_sp;
     }
+
+    assert(!mask || !ptr_mask(data, mask));
+    return data;
 }
 
 void
