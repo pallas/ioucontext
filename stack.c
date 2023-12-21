@@ -63,7 +63,7 @@ stack_alloca(stack_t *s, size_t size, size_t align) {
         assert(bottom <= data);
         s->ss_size = data - bottom;
     } else {
-        data = ptr_mask(bottom + align, ~mask);
+        data = ptr_mask(bottom + mask, ~mask);
         assert(data < top - size);
         s->ss_sp = data + size;
         s->ss_size = top - s->ss_sp;
