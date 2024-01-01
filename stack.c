@@ -100,4 +100,8 @@ rlimit_stack() {
 stack_t stack_get_rlimit() { return stack_get(rlimit_stack()); }
 stack_t stack_get_signal() { return stack_get(SIGSTKSZ); }
 
+stack_t stack_clear(stack_t stack) { madvise(stack.ss_sp, stack.ss_size, MADV_FREE); return stack; }
+stack_t stack_nofork(stack_t stack) { madvise(stack.ss_sp, stack.ss_size, MADV_DONTFORK); return stack; }
+stack_t stack_dofork(stack_t stack) { madvise(stack.ss_sp, stack.ss_size, MADV_DOFORK); return stack; }
+
 //
