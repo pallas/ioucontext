@@ -18,10 +18,8 @@ typedef struct fiber_s {
 
 static void
 fiber_put(fiber_t *f) {
-    reactor_t * reactor = f->reactor;
-    stack_t stack = f->full_stack;
-    stack_put(stack);
-    reactor_enter_core(reactor);
+    reactor_stack_put(f->reactor, f->full_stack);
+    reactor_enter_core(f->reactor);
     abort();
 }
 
@@ -38,7 +36,7 @@ ucontext_t *
 fiber_get(reactor_t *reactor) {
     assert(reactor);
 
-    stack_t main_stack = stack_get_rlimit();
+    stack_t main_stack = reactor->stack_cache ? reactor_stack_get(reactor) : stack_nofork(stack_get_rlimit());
     stack_t full_stack = main_stack;
 
     fiber_t * fiber = stack_push(&main_stack, fiber_t);

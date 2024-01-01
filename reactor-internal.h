@@ -15,11 +15,14 @@
 extern "C" {
 #endif
 
+typedef struct reactor_stack_cache_s reactor_stack_cache_t;
+
 typedef struct reactor_s {
     struct io_uring ring;
     jump_queue_t todos;
     sigjmp_buf *runner;
     stack_t stack;
+    reactor_stack_cache_t * stack_cache;
     void *cookie;
     reactor_cookie_eat_t cookie_eat;
     int result;
@@ -36,6 +39,9 @@ struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
 void reactor_reserve_sqes(reactor_t *, size_t);
 unsigned reactor_inflight(const reactor_t *);
 bool reactor_todos(const reactor_t *);
+
+stack_t reactor_stack_get(reactor_t *);
+void reactor_stack_put(reactor_t *, stack_t);
 
 #ifdef __cplusplus
 }

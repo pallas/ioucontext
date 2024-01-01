@@ -46,7 +46,8 @@ reactor_set(reactor_t * reactor) {
 
     jump_queue_reset(&reactor->todos);
     reactor->runner = NULL;
-    reactor->stack = stack_get_signal();
+    reactor->stack = stack_dofork(stack_get_signal());
+    reactor->stack_cache = NULL;
     reactor->cookie = NULL;
     reactor->cookie_eat = NULL;
     reactor->result = 0;
@@ -77,6 +78,8 @@ reactor_put(reactor_t * reactor) {
     io_uring_unregister_ring_fd(&reactor->ring);
     io_uring_queue_exit(&reactor->ring);
     stack_put(reactor->stack);
+    while (reactor->stack_cache)
+        stack_put(reactor_stack_get(reactor));
 }
 
 void *
@@ -265,6 +268,28 @@ bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
 unsigned reactor_inflight(const reactor_t * reactor) { return reactor->sqes - reactor->cqes; }
 bool reactor_todos(const reactor_t * reactor) { return !jump_queue_empty(&reactor->todos); }
 bool reactor_runnable(const reactor_t * reactor) { return reactor_inflight(reactor) > 0 || reactor_todos(reactor); }
+
+typedef struct reactor_stack_cache_s {
+    stack_t stack;
+    reactor_stack_cache_t *next;
+} reactor_stack_cache_t;
+
+stack_t
+reactor_stack_get(reactor_t * reactor) {
+    assert(reactor->stack_cache);
+    stack_t stack = reactor->stack_cache->stack;
+    reactor->stack_cache = reactor->stack_cache->next;
+    return stack;
+}
+
+void
+reactor_stack_put(reactor_t * reactor, stack_t stack) {
+    reactor_stack_cache_t * entry = (reactor_stack_cache_t *)stack.ss_sp;
+    stack_clear(stack);
+    entry->stack = stack;
+    entry->next = reactor->stack_cache;
+    reactor->stack_cache = entry;
+}
 
 void
 reactor_run(reactor_t * reactor) {
