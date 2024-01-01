@@ -251,10 +251,20 @@ iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec 
     return reactor->result > 0 && !!(reactor->result & mask);
 }
 
-
 bool iou_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLRDHUP, delta); }
 bool iou_poll_in(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLIN, delta); }
 bool iou_poll_out(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLOUT, delta); }
+
+ssize_t
+iou_pread(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offset) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_read(sqe, fildes, buf, nbytes, offset);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
 
 int
 iou_printf(reactor_t * reactor, int fd, const char *format, ...) {
@@ -267,19 +277,19 @@ iou_printf(reactor_t * reactor, int fd, const char *format, ...) {
 }
 
 ssize_t
-iou_read(reactor_t * reactor, int fildes, void *buf, size_t nbytes) {
-    return iou_read_offset(reactor, fildes, buf, nbytes, -1);
-}
-
-ssize_t
-iou_read_offset(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offset) {
+iou_pwrite(reactor_t * reactor, int fildes, const void *buf, size_t nbytes, off_t offset) {
     assert(reactor);
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_read(sqe, fildes, buf, nbytes, offset);
+    io_uring_prep_write(sqe, fildes, buf, nbytes, offset);
     reactor_promise(reactor, sqe);
 
     return reactor->result;
+}
+
+ssize_t
+iou_read(reactor_t * reactor, int fildes, void *buf, size_t nbytes) {
+    return iou_pread(reactor, fildes, buf, nbytes, -1);
 }
 
 ssize_t
@@ -637,24 +647,13 @@ iou_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
     ssize_t out = 0;
 
     while (out < nbytes) {
-        ssize_t n = iou_write_offset(reactor, fildes, buf + out, nbytes - out, -1);
+        ssize_t n = iou_pwrite(reactor, fildes, buf + out, nbytes - out, -1);
         if (n < 0)
             return n;
         out += n;
     }
 
     return out;
-}
-
-ssize_t
-iou_write_offset(reactor_t * reactor, int fildes, const void *buf, size_t nbytes, off_t offset) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_write(sqe, fildes, buf, nbytes, offset);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
 }
 
 void

@@ -40,9 +40,10 @@ int iou_openat(reactor_t *, int dirfd, const char *pathname, int flags, mode_t m
 bool iou_poll_hup(reactor_t *, int fd, const struct timespec delta);
 bool iou_poll_in(reactor_t *, int fd, const struct timespec delta);
 bool iou_poll_out(reactor_t *, int fd, const struct timespec delta);
+ssize_t iou_pread(reactor_t *, int fildes, void *buf, size_t nbyte, off_t offset);
 int iou_printf(reactor_t *, int fd, const char *format, ...);
+ssize_t iou_pwrite(reactor_t *, int fildes, const void *buf, size_t nbyte, off_t offset);
 ssize_t iou_read(reactor_t *, int fildes, void *buf, size_t nbyte);
-ssize_t iou_read_offset(reactor_t *, int fildes, void *buf, size_t nbyte, off_t offset);
 ssize_t iou_recv(reactor_t *, int socket, void *buffer, size_t length, int flags);
 ssize_t iou_recvfrom(reactor_t *, int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t address_len);
 int iou_rename(reactor_t *, const char *oldpath, const char *newpath);
@@ -73,7 +74,6 @@ int iou_unlink(reactor_t *, const char *pathname);
 int iou_unlinkat(reactor_t *, int dirfd, const char *pathname);
 int iou_vprintf(reactor_t *, int fd, const char *format, va_list args);
 ssize_t iou_write(reactor_t *, int fildes, const void *buf, size_t nbyte);
-ssize_t iou_write_offset(reactor_t *, int fildes, const void *buf, size_t nbyte, off_t offset);
 void iou_yield(reactor_t *);
 
 #ifdef __cplusplus
