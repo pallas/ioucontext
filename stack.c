@@ -73,6 +73,15 @@ stack_alloca(stack_t *s, size_t size, size_t align) {
     return data;
 }
 
+stack_t
+stack_split(stack_t *s, size_t size, size_t align) {
+    assert(s->ss_size > size + align);
+    return (stack_t) {
+        .ss_sp = stack_alloca(s, size, align),
+        .ss_size = size,
+    };
+}
+
 void
 stack_put(stack_t s) {
 #ifdef HAVE_MEMCHECK_H

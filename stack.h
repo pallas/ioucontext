@@ -15,6 +15,7 @@ stack_t stack_get_signal();
 
 void * stack_alloca(stack_t *, size_t, size_t);
 #define stack_push(STACK, TYPE) ({ (TYPE*) stack_alloca((STACK), sizeof(TYPE), alignof(TYPE)); })
+stack_t stack_split(stack_t *, size_t, size_t);
 
 void stack_put(stack_t);
 
