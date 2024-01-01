@@ -608,15 +608,28 @@ static const cookie_io_functions_t _iou_vprintf_cookie_io_functions = {
 int
 iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
     assert(reactor);
-    _iou_vprintf_cookie_t cookie = {
-        .reactor = reactor,
-        .fd = fd,
-    };
-    FILE *file = fopencookie(&cookie, "w", _iou_vprintf_cookie_io_functions);
-    int result = vfprintf(file, format, args);
-    fflush(file);
-    fclose(file);
-    return 0;
+
+    va_list copy;
+    va_copy(copy, args);
+
+    char buffer[256];
+    int result = vsnprintf(buffer, sizeof buffer, format, args);
+
+    if (result >= sizeof buffer) {
+        _iou_vprintf_cookie_t cookie = {
+            .reactor = reactor,
+            .fd = fd,
+        };
+        FILE *file = fopencookie(&cookie, "w", _iou_vprintf_cookie_io_functions);
+        result = vfprintf(file, format, copy);
+        fflush(file);
+        fclose(file);
+    } else if (result > 0) {
+        result = iou_write(reactor, fd, buffer, result);
+    }
+
+    va_end(copy);
+    return result;
 }
 
 ssize_t
