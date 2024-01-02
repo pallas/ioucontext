@@ -18,6 +18,9 @@ struct timespec normalize_timespec(const struct timespec);
 struct timespec timespec_from_double(double);
 double double_from_timespec(const struct timespec);
 
+int timespec_when(const struct timespec);
+bool timespec_past(const struct timespec);
+bool timespec_present(const struct timespec);
 bool timespec_future(const struct timespec);
 bool timespec_normalized(const struct timespec);
 

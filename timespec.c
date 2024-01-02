@@ -50,6 +50,27 @@ double_from_timespec(const struct timespec ts) {
     return ts.tv_sec + ts.tv_nsec / (double)nsec_per_sec;
 }
 
+int
+timespec_when(const struct timespec ts) {
+    assert(timespec_normalized(ts));
+    return timespec_past(ts) ? -1
+        :  timespec_present(ts) ? 0
+        :  timespec_future(ts) ? 1
+        :  (abort(),0);
+}
+
+bool
+timespec_past(const struct timespec ts) {
+    assert(timespec_normalized(ts));
+    return ts.tv_sec < 0;
+}
+
+bool
+timespec_present(const struct timespec ts) {
+    assert(timespec_normalized(ts));
+    return ts.tv_sec == 0 && ts.tv_nsec == 0;
+}
+
 bool
 timespec_future(const struct timespec ts) {
     assert(timespec_normalized(ts));
