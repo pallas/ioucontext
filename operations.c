@@ -235,7 +235,7 @@ static bool
 iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec delta) {
     assert(reactor);
 
-    if (timespec_future(normalize_timespec(delta))) {
+    if (!timespec_past(normalize_timespec(delta))) {
         struct timespec when = reify_timespec(delta);
         reactor_reserve_sqes(reactor, 2);
 
