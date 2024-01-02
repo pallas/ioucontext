@@ -30,7 +30,7 @@ iou_barrier(reactor_t * reactor) {
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_nop(sqe);
     io_uring_sqe_set_flags(sqe, IOSQE_IO_DRAIN);
-    io_uring_sqe_set_data(sqe, NULL);
+    reactor_future_fake(reactor, sqe);
 }
 
 void
@@ -39,7 +39,7 @@ iou_cancel_fd_all(reactor_t * reactor, int fd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_cancel_fd(sqe, fd, IORING_ASYNC_CANCEL_ALL);
-    io_uring_sqe_set_data(sqe, NULL);
+    reactor_future_fake(reactor, sqe);
 }
 
 void
@@ -48,7 +48,7 @@ iou_cancel_fd_any(reactor_t * reactor, int fd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_cancel_fd(sqe, fd, 0);
-    io_uring_sqe_set_data(sqe, NULL);
+    reactor_future_fake(reactor, sqe);
 }
 
 int

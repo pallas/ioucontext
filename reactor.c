@@ -198,6 +198,11 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
 }
 
 void
+reactor_future_fake(reactor_t * reactor, struct io_uring_sqe * sqe) {
+    io_uring_sqe_set_data(sqe, NULL);
+}
+
+void
 reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     assert(reactor);
     assert(todo->fun);
