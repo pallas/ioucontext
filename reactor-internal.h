@@ -28,6 +28,7 @@ typedef struct reactor_s {
     int result;
     unsigned sqes, cqes;
     int reserved;
+    long int queue_depth;
 } reactor_t;
 
 void reactor_enter_core(reactor_t *);

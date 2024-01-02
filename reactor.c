@@ -38,9 +38,9 @@ reactor_set(reactor_t * reactor) {
     }
 
     const char * env_queue_depth = getenv("IOUCONTEXT_QUEUE_DEPTH");
-    long int queue_depth = env_queue_depth ? strtol(env_queue_depth, NULL, 0) : 64;
+    reactor->queue_depth = env_queue_depth ? strtol(env_queue_depth, NULL, 0) : 64;
 
-    TRY(io_uring_queue_init_params, queue_depth, &reactor->ring, &params);
+    TRY(io_uring_queue_init_params, reactor->queue_depth, &reactor->ring, &params);
     TRY(io_uring_register_ring_fd, &reactor->ring);
     TRY(io_uring_ring_dontfork, &reactor->ring);
 
@@ -236,6 +236,9 @@ reactor_refer(reactor_t * reactor) {
 void
 reactor_reserve_sqes(reactor_t * reactor, size_t n) {
     assert(reactor);
+
+    if (UNLIKELY(reactor->queue_depth < n))
+        abort();
 
     if (reactor_todos(reactor) || io_uring_cq_has_overflow(&reactor->ring))
         reactor_defer(reactor);
