@@ -53,6 +53,7 @@ sins.
 
 Thanks to some wonderful resources, including
  * [Lord of the io_uring](https://unixism.net/loti/),
+ * [Nick Black](https://nick-black.com/dankwiki/index.php/Io_uring),
  * [archlinux](https://man.archlinux.org/listing/extra/liburing/), &
  * [LWN.net](https://lwn.net/).
 
