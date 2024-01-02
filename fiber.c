@@ -33,6 +33,7 @@ fiber_bounce(fiber_t *f) {
 }
 
 ucontext_t *
+__attribute__((malloc, malloc(fiber_put, 1)))
 fiber_get(reactor_t *reactor) {
     assert(reactor);
 
