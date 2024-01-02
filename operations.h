@@ -6,6 +6,7 @@
 #include "timespec.h"
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -51,6 +52,13 @@ int iou_rename_noreplace(reactor_t *, const char *oldpath, const char *newpath);
 int iou_renameat(reactor_t *, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
 int iou_rmdir(reactor_t * reactor, const char *pathname);
 int iou_rmdirat(reactor_t *, int dirfd, const char *pathname);
+
+typedef uintptr_t iou_semaphore_t;
+iou_semaphore_t iou_semaphore_get(reactor_t *, uint64_t value);
+int iou_semaphore_wait(reactor_t *, iou_semaphore_t, const struct timespec delta);
+void iou_semaphore_post(reactor_t *, iou_semaphore_t);
+void iou_semaphore_put(reactor_t *, iou_semaphore_t);
+
 ssize_t iou_send(reactor_t *, int socket, const void *buffer, size_t length, int flags);
 ssize_t iou_sendto(reactor_t *, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
 int iou_setxattr(reactor_t *, const char *path, const char *name, const void *value, size_t size, int flags);

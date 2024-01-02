@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <stdio.h>
+#include <sys/eventfd.h>
 #include <netinet/in.h>
 
 int
@@ -344,6 +345,81 @@ iou_renameat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirf
 int
 iou_rmdir(reactor_t * reactor, const char *pathname) {
     return iou_rmdirat(reactor, AT_FDCWD, pathname);
+}
+
+iou_semaphore_t
+iou_semaphore_get(reactor_t * reactor, uint64_t value) {
+    return (iou_semaphore_t)eventfd(value, EFD_CLOEXEC | EFD_SEMAPHORE);
+}
+
+int
+iou_semaphore_wait(reactor_t * reactor , iou_semaphore_t semaphore, const struct timespec delta) {
+    assert(reactor);
+
+    int efd = (int)semaphore;
+
+    uint64_t value = 0;
+    switch (timespec_when(normalize_timespec(delta))) {
+
+    case -1: {
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_read(sqe, efd, &value, sizeof value, -1);
+        reactor_promise(reactor, sqe);
+
+        return reactor->result == sizeof value ? value : reactor->result;
+        }
+
+    case 0: {
+        struct iovec iov = {
+            .iov_base = &value,
+            .iov_len = sizeof value,
+        };
+
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_readv2(sqe, efd, &iov, 1, -1, RWF_NOWAIT);
+        reactor_promise(reactor, sqe);
+
+        return reactor->result == sizeof value ? value :
+            reactor->result == -EAGAIN ? 0 :
+            reactor->result;
+        }
+
+    case 1: {
+        struct timespec when = reify_timespec(delta);
+        reactor_reserve_sqes(reactor, 2);
+
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_read(sqe, efd, &value, sizeof value, -1);
+        reactor_promise_impatient(reactor, sqe, when);
+
+        return reactor->result == sizeof value ? value :
+            reactor->result == -ECANCELED ? 0 :
+            reactor->result;
+        }
+
+    default: abort();
+    }
+}
+
+static const uint64_t value = 1;
+void iou_semaphore_post(reactor_t * reactor, iou_semaphore_t semaphore) {
+    assert(reactor);
+
+    int efd = (int)semaphore;
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_write(sqe, efd, &value, sizeof value, -1);
+    reactor_future_fake(reactor, sqe);
+}
+
+void iou_semaphore_put(reactor_t * reactor, iou_semaphore_t semaphore) {
+    assert(reactor);
+
+    int efd = (int)semaphore;
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_close(sqe, efd);
+    reactor_future_fake(reactor, sqe);
 }
 
 int
