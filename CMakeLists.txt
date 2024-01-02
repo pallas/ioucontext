@@ -19,6 +19,7 @@ project(ioucontext)
 # objects become the library
 set(${PROJECT_NAME}_OBJECTS
 	arena
+	ares_dns
 	fiber
 	jump_queue
 	operations
@@ -34,6 +35,7 @@ set(${PROJECT_NAME}_OBJECTS
 # headers are installed
 set(${PROJECT_NAME}_HEADERS
 	arena
+	ares_dns
 	fiber
 	ioucontext
 	macros
@@ -46,6 +48,7 @@ set(${PROJECT_NAME}_HEADERS
 # executables link the shared library and are installed
 set(${PROJECT_NAME}_EXECUTABLES
 	iou_cat
+	iou_dns
 	iou_port7
 	iou_timers
         )
@@ -82,6 +85,10 @@ if (${LIBUCONTEXT})
 	target_link_libraries(${PROJECT_NAME}-static ${LIBUCONTEXT})
 	target_link_libraries(${PROJECT_NAME}-shared ${LIBUCONTEXT})
 endif()
+
+find_library(LIBCARES cares)
+target_link_libraries(${PROJECT_NAME}-static ${LIBCARES})
+target_link_libraries(${PROJECT_NAME}-shared ${LIBCARES})
 
 install(TARGETS
         ${PROJECT_NAME}-static
