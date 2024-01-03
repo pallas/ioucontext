@@ -134,9 +134,8 @@ reactor_cqes(reactor_t * reactor) {
     }
 
     unsigned delta = reactor->cqes - base;
-
-    assert(delta > 0);
-    io_uring_cq_advance(&reactor->ring, delta);
+    if (delta > 0)
+        io_uring_cq_advance(&reactor->ring, delta);
 
     if (todo)
         jump_invoke(todo);
