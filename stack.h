@@ -19,6 +19,9 @@ stack_t stack_dofork(stack_t);
 
 void * stack_alloca(stack_t *, size_t, size_t);
 #define stack_push(STACK, TYPE) ({ (TYPE*) stack_alloca((STACK), sizeof(TYPE), alignof(TYPE)); })
+#define stack_array(STACK, TYPE, COUNT) ({ (TYPE*) stack_alloca((STACK), (COUNT) * sizeof(TYPE), alignof(TYPE)); })
+void * stack_memcpy(stack_t *, const void *, size_t, size_t);
+char * stack_strcpy(stack_t *, const char *);
 stack_t stack_split(stack_t *, size_t, size_t);
 
 void stack_put(stack_t);

@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 
@@ -71,6 +72,19 @@ stack_alloca(stack_t *s, size_t size, size_t align) {
 
     assert(!mask || !ptr_mask(data, mask));
     return data;
+}
+
+void *
+stack_memcpy(stack_t *s, const void *from, size_t size, size_t align) {
+    void *to = stack_alloca(s, size, align);
+    if (to)
+        memcpy(to, from, size);
+    return to;
+}
+
+char *
+stack_strcpy(stack_t *s, const char *str) {
+    return (char*)stack_memcpy(s, str, strlen(str) + 1, alignof(char));
 }
 
 stack_t
