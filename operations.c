@@ -63,6 +63,15 @@ iou_close(reactor_t * reactor, int fd) {
     return reactor->result;
 }
 
+void
+iou_close_fast(reactor_t * reactor, int fd) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_close(sqe, fd);
+    reactor_future_fake(reactor, sqe);
+}
+
 int
 iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     assert(reactor);
