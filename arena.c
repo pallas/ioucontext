@@ -82,13 +82,15 @@ chunk_get(size_t size) {
     const int prot = PROT_READ | PROT_WRITE;
     const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
     chunk_t * chunk = (chunk_t *) mmap(NULL, size, prot, flags, -1, 0);
-    if (chunk) {
-        *chunk = (chunk_t) {
-            .size = size,
-            .data = chunk + 1,
-        };
-        assert(chunk_has(chunk, chunk->data));
-    }
+    if (MAP_FAILED == chunk)
+        return NULL;
+
+    *chunk = (chunk_t) {
+        .size = size,
+        .data = chunk + 1,
+    };
+    assert(chunk_has(chunk, chunk->data));
+
     return chunk;
 }
 
