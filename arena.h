@@ -41,6 +41,7 @@ bool arena__plant(arena_t * arena, size_t align);
 void * arena__water(arena_t * arena, size_t size);
 #define arena_water(ARENA, TYPE) ((TYPE*)arena__water(ARENA, sizeof(TYPE)))
 void * __attribute__ ((malloc)) arena_bloom(arena_t * arena);
+void arena_reset(arena_t * arena);
 
 void arena_cull(arena_t * arena, void *);
 

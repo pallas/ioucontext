@@ -174,12 +174,23 @@ arena_bloom(arena_t * arena) {
     return data;
 }
 
+void
+arena_reset(arena_t * arena) {
+    if (arena->object) {
+        arena->current->data = arena->object;
+        arena->object = NULL;
+        arena->align = 1;
+        arena->size = 0;
+    }
+}
+
 void *
 __attribute__ ((malloc, alloc_size(2), alloc_align(3)))
 arena__new(arena_t * arena, size_t size, size_t align)
 {
     if (arena__plant(arena, align) && arena__water(arena, size))
         return arena_bloom(arena);
+    arena_reset(arena);
     return NULL;
 }
 
