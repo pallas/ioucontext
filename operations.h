@@ -3,18 +3,19 @@
 #define IOUCONTEXT_OPERATIONS_H
 
 #include "reactor.h"
-#include "timespec.h"
 
 #include <spawn.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct sockaddr;
+struct statx;
+struct timespec;
 
 int iou_accept(reactor_t *, int fd, struct sockaddr *addr, socklen_t *addrlen);
 void iou_barrier(reactor_t *);

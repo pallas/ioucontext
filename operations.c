@@ -13,6 +13,7 @@
 #include <poll.h>
 #include <stdio.h>
 #include <sys/eventfd.h>
+#include <sys/stat.h>
 #include <ucontext.h>
 
 int
