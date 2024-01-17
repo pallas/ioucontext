@@ -47,6 +47,7 @@ set(${PROJECT_NAME}_HEADERS
 set(${PROJECT_NAME}_EXECUTABLES
 	iou_cat
 	iou_port7
+	iou_timers
         )
 
 # tests link the static library and are not installed
