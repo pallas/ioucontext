@@ -86,6 +86,7 @@ ssize_t iou_tee(reactor_t *, int fd_in, int fd_out, size_t len);
 int iou_unlink(reactor_t *, const char *pathname);
 int iou_unlinkat(reactor_t *, int dirfd, const char *pathname);
 int iou_vprintf(reactor_t *, int fd, const char *format, va_list args);
+pid_t iou_waitpid(reactor_t *, pid_t, int *status, int options);
 ssize_t iou_write(reactor_t *, int fildes, const void *buf, size_t nbyte);
 void iou_yield(reactor_t *);
 

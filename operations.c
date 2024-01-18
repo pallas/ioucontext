@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <sys/eventfd.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <ucontext.h>
 
 int
@@ -847,6 +848,15 @@ iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
     }
 
     va_end(copy);
+    return result;
+}
+
+pid_t
+iou_waitpid(reactor_t * reactor, pid_t pid, int *status, int options) {
+    int result;
+    while (!(result = waitpid(pid, status, options | WNOHANG)))
+        iou_yield(reactor);
+
     return result;
 }
 
