@@ -582,19 +582,19 @@ iou_socket(reactor_t * reactor, int domain, int type, int protocol) {
 }
 
 static void
-_iou_spawn_trampoline(sigjmp_buf *buf, pid_t *pid, const posix_spawnattr_t *attrs, int *stdin_fd, int *stdout_fd, const char *command, const char *argv[]) {
+_iou_spawn_trampoline(sigjmp_buf *buf, pid_t *pid, const posix_spawnattr_t *attrs, int stdin_fd, int stdout_fd, const char *command, const char *argv[]) {
     posix_spawn_file_actions_t file_actions;
 
     TRY(posix_spawn_file_actions_init, &file_actions);
 
-    if (stdin_fd) {
-        TRY(posix_spawn_file_actions_adddup2, &file_actions, *stdin_fd, STDIN_FILENO);
+    if (stdin_fd >= 0) {
+        TRY(posix_spawn_file_actions_adddup2, &file_actions, stdin_fd, STDIN_FILENO);
     } else {
         TRY(posix_spawn_file_actions_addclose, &file_actions, STDIN_FILENO);
     }
 
-    if (stdout_fd) {
-        TRY(posix_spawn_file_actions_adddup2, &file_actions, *stdout_fd, STDOUT_FILENO);
+    if (stdout_fd >= 0) {
+        TRY(posix_spawn_file_actions_adddup2, &file_actions, stdout_fd, STDOUT_FILENO);
     } else {
         TRY(posix_spawn_file_actions_addopen, &file_actions, STDOUT_FILENO, "/dev/null", O_WRONLY|O_APPEND, 0666);
     }
@@ -607,7 +607,7 @@ _iou_spawn_trampoline(sigjmp_buf *buf, pid_t *pid, const posix_spawnattr_t *attr
 }
 
 pid_t
-iou_spawn(reactor_t * reactor, const posix_spawnattr_t *attrs, int *to_fd, int *from_fd, const char *command, ...) {
+iou_spawn(reactor_t * reactor, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, ...) {
     va_list argv;
     va_start(argv, command);
     pid_t pid = iou_spawnv(reactor, attrs, to_fd, from_fd, command, argv);
@@ -626,7 +626,7 @@ va_list_size(va_list va) {
 }
 
 pid_t
-iou_spawnv(reactor_t * reactor, const posix_spawnattr_t *attrs, int *to_fd, int *from_fd, const char *command, va_list args) {
+iou_spawnv(reactor_t * reactor, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, va_list args) {
     assert(reactor);
 
     stack_t stack = reactor->stack;
@@ -650,20 +650,6 @@ iou_spawnv(reactor_t * reactor, const posix_spawnattr_t *attrs, int *to_fd, int 
     assert(NULL == va_arg(args, char*));
     argv[argc] = NULL;
 
-    int to_pipes[2];
-    if (to_fd && pipe2(to_pipes, O_CLOEXEC) < 0) {
-        return -errno;
-    }
-
-    int from_pipes[2];
-    if (from_fd && pipe2(from_pipes, O_CLOEXEC) < 0) {
-        if (to_fd) {
-            iou_close_fast(reactor, to_pipes[0]);
-            iou_close_fast(reactor, to_pipes[1]);
-        }
-        return -errno;
-    }
-
     pid_t pid = -1;
     sigjmp_buf todo;
     if (!sigsetjmp(todo, false)) {
@@ -674,28 +660,9 @@ iou_spawnv(reactor_t * reactor, const posix_spawnattr_t *attrs, int *to_fd, int 
         makecontext(&uc, (void(*)())_iou_spawn_trampoline, 7,
             &todo,
             &pid, attrs,
-            to_fd ? &to_pipes[0] : NULL,
-            from_fd ? &from_pipes[1] : NULL,
+            to_fd, from_fd,
             command, argv);
         setcontext(&uc);
-    }
-
-    if (to_fd) {
-        iou_close_fast(reactor, to_pipes[0]);
-        if (pid > 0) {
-            *to_fd = to_pipes[1];
-        } else {
-            iou_close_fast(reactor, to_pipes[1]);
-        }
-    }
-
-    if (from_fd) {
-        if (pid > 0) {
-            *from_fd = from_pipes[0];
-        } else {
-            iou_close_fast(reactor, from_pipes[0]);
-        }
-        iou_close_fast(reactor, from_pipes[1]);
     }
 
     return pid;
