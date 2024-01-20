@@ -41,6 +41,11 @@ extern "C" {
     _result; \
 })
 
+#define ERRNO(f, ...) ({ \
+    typeof (f (__VA_ARGS__)) _result = f(__VA_ARGS__); \
+    _result < 0 ? ( errno = -_result), -1 : _result; \
+})
+
 #define LIKELY(e) __builtin_expect(!!(e), true)
 #define UNLIKELY(e) __builtin_expect(!!(e), false)
 
