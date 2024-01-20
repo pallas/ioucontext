@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+struct epoll_event;
 struct sockaddr;
 struct statx;
 struct timespec;
@@ -24,6 +25,11 @@ void iou_cancel_fd_any(reactor_t *, int fd);
 int iou_close(reactor_t *, int fd);
 void iou_close_fast(reactor_t *, int fd);
 int iou_connect(reactor_t *, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+int iou_epoll_add(reactor_t *, int epfd, int fd, struct epoll_event *event);
+int iou_epoll_ctl(reactor_t *, int epfd, int op, int fd, struct epoll_event *event);
+int iou_epoll_del(reactor_t *, int epfd, int fd);
+int iou_epoll_mod(reactor_t *, int epfd, int fd, struct epoll_event *event);
+int iou_epoll_set(reactor_t *, int epfd, int fd, struct epoll_event *event);
 int iou_exchange(reactor_t *, const char *oldpath, const char *newpath);
 int iou_exchangeat(reactor_t *, int dirfd, const char *oldpath, const char *newpath);
 int iou_fadvise(reactor_t *, int fd, off_t offset, off_t len, int advice);

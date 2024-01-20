@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <stdio.h>
+#include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -85,6 +86,40 @@ iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, sockle
     reactor_promise(reactor, sqe);
 
     return reactor->result;
+}
+
+int
+iou_epoll_add(reactor_t * reactor, int epfd, int fd, struct epoll_event *event) {
+    return iou_epoll_ctl(reactor, epfd, EPOLL_CTL_ADD, fd, event);
+}
+
+int
+iou_epoll_ctl(reactor_t * reactor, int epfd, int op, int fd, struct epoll_event *event) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_epoll_ctl(sqe, epfd, fd, op, event);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
+int
+iou_epoll_del(reactor_t * reactor, int epfd, int fd) {
+    return iou_epoll_ctl(reactor, epfd, EPOLL_CTL_DEL, fd, NULL);
+}
+
+int
+iou_epoll_mod(reactor_t * reactor, int epfd, int fd, struct epoll_event *event) {
+    return iou_epoll_ctl(reactor, epfd, EPOLL_CTL_MOD, fd, event);
+}
+
+int
+iou_epoll_set(reactor_t * reactor, int epfd, int fd, struct epoll_event *event) {
+    int result = iou_epoll_mod(reactor, epfd, fd, event);
+    if (result == -ENOENT)
+        result = iou_epoll_add(reactor, epfd, fd, event);
+    return result;
 }
 
 int
