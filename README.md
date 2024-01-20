@@ -42,6 +42,7 @@ eaten.
 ## Examples
  * iou_cat --- moves bytes between one or more input streams and stdout
  * iou_port7 --- TCP & UDP echo service, à la [port7](https://github.com/pallas/port7)
+ * iou_timers --- use multiple timerfds to make some noise
 
 ## Extra
 
@@ -53,7 +54,8 @@ sins.
 
 Thanks to some wonderful resources, including
  * [Lord of the io_uring](https://unixism.net/loti/),
- * [Nick Black](https://nick-black.com/dankwiki/index.php/Io_uring),
+ * [Fibers, Oh My!](https://graphitemaster.github.io/fibers/),
+ * [dankwiki](https://nick-black.com/dankwiki/index.php/Io_uring),
  * [archlinux](https://man.archlinux.org/listing/extra/liburing/), &
  * [LWN.net](https://lwn.net/).
 
