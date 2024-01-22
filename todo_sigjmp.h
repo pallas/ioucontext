@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-typedef struct {
+typedef struct todo_sigjmp_s {
     jump_chain_t jump;
     sigjmp_buf buf;
 } todo_sigjmp_t;

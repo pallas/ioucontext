@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-typedef struct {
+typedef struct todo_ucontext_s {
     jump_chain_t jump;
     struct ucontext_t uc;
 } todo_ucontext_t;
