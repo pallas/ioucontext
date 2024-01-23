@@ -56,6 +56,12 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
         forward_dns(reactor, iou_ares_data, name);
 }
 
+void
+resolve_all(reactor_t * reactor, iou_ares_data_t * iou_ares_data, int argc, const char *argv[]) {
+    for (int i = 1 ; i < argc ; ++i)
+        reactor_fiber(resolve_dns, reactor, iou_ares_data, (char*)argv[i]);
+}
+
 int
 main(int argc, const char *argv[]) {
     reactor_t * reactor = reactor_get();
@@ -70,8 +76,7 @@ main(int argc, const char *argv[]) {
     | ARES_OPT_FLAGS
     );
 
-    for (int i = 1 ; i < argc ; ++i)
-        reactor_fiber(resolve_dns, reactor, &iou_ares_data, (char*)argv[i]);
+    reactor_fiber(resolve_all, reactor, &iou_ares_data, argc, argv);
 
     reactor_run(reactor);
 
