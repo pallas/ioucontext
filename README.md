@@ -1,8 +1,9 @@
 # ioucontext
 
 `ioucontext` is a coöperative multitasking library built on top of
-[liburing](https://github.com/axboe/liburing) &
-[libucontext](https://github.com/kaniini/libucontext).
+[liburing](https://github.com/axboe/liburing),
+[libucontext](https://github.com/kaniini/libucontext), &
+[c-ares](https://github.com/c-ares/c-ares).
 It is the spiritual successor to
 [liboco](https://github.com/pallas/liboco).
 
@@ -41,6 +42,7 @@ eaten.
 
 ## Examples
  * iou_cat --- moves bytes between one or more input streams and stdout
+ * iou_dns --- resolve dns forward and reverse lookups asynchronously
  * iou_port7 --- TCP & UDP echo service, à la [port7](https://github.com/pallas/port7)
  * iou_timers --- use multiple timerfds to make some noise
 
