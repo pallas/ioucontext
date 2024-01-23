@@ -288,17 +288,35 @@ static bool
 iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec delta) {
     assert(reactor);
 
-    if (!timespec_past(normalize_timespec(delta))) {
+    switch (timespec_when(normalize_timespec(delta))) {
+
+    case -1: {
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_poll_add(sqe, fd, mask);
+        reactor_promise(reactor, sqe);
+        break;
+        }
+
+    case 0: {
+        reactor_reserve_sqes(reactor, 2);
+
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_poll_add(sqe, fd, mask);
+        reactor_promise_nonchalant(reactor, sqe);
+        break;
+        }
+
+    case 1: {
         struct timespec when = reify_timespec(delta);
         reactor_reserve_sqes(reactor, 2);
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_poll_add(sqe, fd, mask);
         reactor_promise_impatient(reactor, sqe, when);
-    } else {
-        struct io_uring_sqe * sqe = reactor_sqe(reactor);
-        io_uring_prep_poll_add(sqe, fd, mask);
-        reactor_promise(reactor, sqe);
+        break;
+        }
+
+    default: abort();
     }
 
     return reactor->result > 0 && !!(reactor->result & mask);
