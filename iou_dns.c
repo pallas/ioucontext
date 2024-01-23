@@ -38,9 +38,12 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
 }
 
 void
-reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * addr, const struct sockaddr * sockaddr, socklen_t socklen) {
+reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * addr) {
+    struct sockaddr_storage sockaddr;
+    socklen_t socklen = sockaddr_parse(&sockaddr, addr, 0);
+
     iou_ares_name_result_t result;
-    iou_ares_nameinfo(iou_ares_data, sockaddr, socklen, ARES_NI_LOOKUPHOST, &result);
+    iou_ares_nameinfo(iou_ares_data, (struct sockaddr *)&sockaddr, socklen, 0, &result);
     iou_ares_wait(&result.future);
 
     if (ARES_SUCCESS != result.status)
@@ -68,9 +71,8 @@ main(int argc, const char *argv[]) {
 
     for (int i = 1 ; i < argc ; ++i) {
         struct sockaddr_storage sockaddr;
-        socklen_t socklen = sockaddr_parse(&sockaddr, argv[i], 80);
-        if (socklen)
-            reactor_fiber(reverse_dns, reactor, &iou_ares_data, (char*)argv[i], (struct sockaddr*)&sockaddr, socklen);
+        if (sockaddr_parse(&sockaddr, argv[i], 0))
+            reactor_fiber(reverse_dns, reactor, &iou_ares_data, (char*)argv[i]);
         else
             reactor_fiber(resolve_dns, reactor, &iou_ares_data, (char*)argv[i]);
     }
