@@ -199,23 +199,27 @@ iou_ares_resolve_any(iou_ares_data_t * data) {
         return true;
     }
 
-    struct epoll_event event;
-    if (epoll_wait(data->epfd, &event, 1, 0) < 1)
+    struct epoll_event events[32];
+    int nfds;
+    do { } while ((nfds = epoll_wait(data->epfd, events, sizeof(events)/sizeof(*events), 0)) < 0 && errno == EINTR);
+    if (nfds < 0)
         return false;
 
-    int fd = event.data.fd;
-    bool read = event.events & EPOLLIN;
-    bool write = event.events & EPOLLOUT;
+    for (int i = 0 ; i < nfds ; ++i) {
+        int fd = events[i].data.fd;
+        bool read = events[i].events & EPOLLIN;
+        bool write = events[i].events & EPOLLOUT;
 
-    assert(!read || iou_poll_in(data->reactor, fd, timespec_zero));
-    assert(!write || iou_poll_out(data->reactor, fd, timespec_zero));
+        assert(!read || iou_poll_in(data->reactor, fd, timespec_zero));
+        assert(!write || iou_poll_out(data->reactor, fd, timespec_zero));
 
-    ares_process_fd(data->channel
-    , read ? fd : ARES_SOCKET_BAD
-    , write ? fd : ARES_SOCKET_BAD
-    );
+        ares_process_fd(data->channel
+        , read ? fd : ARES_SOCKET_BAD
+        , write ? fd : ARES_SOCKET_BAD
+        );
+    }
 
-    return true;
+    return nfds > 0;
 }
 
 static void
