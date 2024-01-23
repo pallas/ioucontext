@@ -5,18 +5,6 @@
 #include <netdb.h>
 
 void
-dump_addrinfo(reactor_t * reactor, struct ares_addrinfo * result) {
-    for (struct ares_addrinfo_cname *cnames = result->cnames ; cnames ; cnames = cnames->next)
-        iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", cnames->alias, cnames->name);
-
-    for (struct ares_addrinfo_node *nodes = result->nodes ; nodes ; nodes = nodes->ai_next) {
-        char buf[sockaddr_address_size];
-        if (sockaddr_unparse(nodes->ai_addr, buf, sizeof buf))
-            iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", result->name, buf);
-    }
-}
-
-void
 resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
     iou_ares_addr_result_t result;
     iou_ares_addrinfo(iou_ares_data, name, NULL, NULL, &result);
