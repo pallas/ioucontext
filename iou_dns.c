@@ -5,7 +5,7 @@
 #include <netdb.h>
 
 void
-resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
+forward_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
     iou_ares_addr_result_t result;
     const struct ares_addrinfo_hints hints = {
         .ai_flags = ARES_AI_NOSORT,
@@ -29,12 +29,11 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
 }
 
 void
-reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * addr) {
-    struct sockaddr_storage sockaddr;
-    socklen_t socklen = sockaddr_parse(&sockaddr, addr, 0);
-
+reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * addr,
+        struct sockaddr_storage * sockaddr, socklen_t socklen)
+{
     iou_ares_name_result_t result;
-    iou_ares_nameinfo(iou_ares_data, (struct sockaddr *)&sockaddr, socklen, 0, &result);
+    iou_ares_nameinfo(iou_ares_data, (struct sockaddr *)sockaddr, socklen, 0, &result);
     iou_ares_wait(&result.future);
 
     if (ARES_SUCCESS != result.status)
@@ -44,6 +43,17 @@ reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * a
 
     free(result.node);
     free(result.service);
+}
+
+void
+resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
+    struct sockaddr_storage sockaddr;
+    socklen_t socklen = sockaddr_parse(&sockaddr, name, 0);
+
+    if (socklen)
+        reverse_dns(reactor, iou_ares_data, name, &sockaddr, socklen);
+    else
+        forward_dns(reactor, iou_ares_data, name);
 }
 
 int
@@ -60,13 +70,8 @@ main(int argc, const char *argv[]) {
     | ARES_OPT_FLAGS
     );
 
-    for (int i = 1 ; i < argc ; ++i) {
-        struct sockaddr_storage sockaddr;
-        if (sockaddr_parse(&sockaddr, argv[i], 0))
-            reactor_fiber(reverse_dns, reactor, &iou_ares_data, (char*)argv[i]);
-        else
-            reactor_fiber(resolve_dns, reactor, &iou_ares_data, (char*)argv[i]);
-    }
+    for (int i = 1 ; i < argc ; ++i)
+        reactor_fiber(resolve_dns, reactor, &iou_ares_data, (char*)argv[i]);
 
     reactor_run(reactor);
 
