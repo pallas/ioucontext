@@ -78,7 +78,8 @@ int iou_shutdown_write(reactor_t *, int sockfd);
 struct timespec iou_sleep(reactor_t *, const struct timespec delta);
 bool iou_sleep_absolute(reactor_t *, const struct timespec when);
 int iou_socket(reactor_t *, int domain, int type, int protocol);
-pid_t iou_spawn(reactor_t *, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, ...);
+pid_t iou__spawn(reactor_t *, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, ...);
+#define iou_spawn(...) iou__spawn(__VA_ARGS__, NULL)
 pid_t iou_spawnv(reactor_t *, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, va_list args);
 ssize_t iou_splice(reactor_t *, int fd_in, int fd_out, size_t len);
 ssize_t iou_splice_all(reactor_t *, int fd_in, int fd_out, size_t len);

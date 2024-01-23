@@ -682,7 +682,7 @@ _iou_spawn_trampoline(sigjmp_buf *buf, pid_t *pid, const posix_spawnattr_t *attr
 }
 
 pid_t
-iou_spawn(reactor_t * reactor, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, ...) {
+iou__spawn(reactor_t * reactor, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, ...) {
     va_list argv;
     va_start(argv, command);
     pid_t pid = iou_spawnv(reactor, attrs, to_fd, from_fd, command, argv);
