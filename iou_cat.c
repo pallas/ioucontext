@@ -89,7 +89,7 @@ cat(reactor_t * reactor, int argc, const char *argv[]) {
 }
 
 int
-main(int argc, char *argv[]) {
+main(int argc, const char *argv[]) {
     cpu_set_t cpu_set;
     CPU_ZERO_S(sizeof(cpu_set_t), &cpu_set);
     CPU_SET_S(0, sizeof(cpu_set_t), &cpu_set);
