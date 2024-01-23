@@ -18,6 +18,10 @@
 #include <sys/wait.h>
 #include <ucontext.h>
 
+#ifdef HAVE_MEMCHECK_H
+#include <valgrind/memcheck.h>
+#endif
+
 int
 iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen) {
     assert(reactor);
@@ -312,6 +316,15 @@ iou_pread(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offse
     io_uring_prep_read(sqe, fildes, buf, nbytes, offset);
     reactor_promise(reactor, sqe);
 
+#ifdef HAVE_MEMCHECK_H
+    if (reactor->result > 0) {
+        assert(reactor->result <= nbytes);
+        VALGRIND_MAKE_MEM_DEFINED(buf, reactor->result);
+        VALGRIND_MAKE_MEM_UNDEFINED(buf + reactor->result, nbytes - reactor->result);
+    } else
+        VALGRIND_MAKE_MEM_UNDEFINED(buf, nbytes);
+#endif
+
     return reactor->result;
 }
 
@@ -365,6 +378,15 @@ iou_recvfrom(reactor_t * reactor, int socket, void *buffer, size_t length, int f
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_recvmsg(sqe, socket, &msg, flags);
     reactor_promise(reactor, sqe);
+
+#ifdef HAVE_MEMCHECK_H
+    if (reactor->result > 0) {
+        assert(reactor->result <= length);
+        VALGRIND_MAKE_MEM_DEFINED(buffer, reactor->result);
+        VALGRIND_MAKE_MEM_UNDEFINED(buffer + reactor->result, length - reactor->result);
+    } else
+        VALGRIND_MAKE_MEM_UNDEFINED(buffer, length);
+#endif
 
     return reactor->result;
 }
