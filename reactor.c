@@ -119,7 +119,7 @@ static unsigned
 reactor_cqes(reactor_t * reactor) {
     assert(reactor);
 
-    io_uring_submit_and_wait(&reactor->ring, 1);
+    io_uring_submit_and_wait(&reactor->ring, !reactor_todos(reactor));
 
     jump_chain_t * todo = NULL;
     unsigned base = reactor->cqes;
