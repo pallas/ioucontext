@@ -7,7 +7,10 @@
 void
 resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
     iou_ares_addr_result_t result;
-    iou_ares_addrinfo(iou_ares_data, name, NULL, NULL, &result);
+    const struct ares_addrinfo_hints hints = {
+        .ai_flags = ARES_AI_NOSORT,
+    };
+    iou_ares_addrinfo(iou_ares_data, name, NULL, &hints, &result);
     iou_ares_wait(&result.future);
 
     if (ARES_SUCCESS != result.status)
