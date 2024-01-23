@@ -169,6 +169,29 @@ reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
 }
 
 void
+reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
+    assert(reactor->reserved >= 1);
+
+    todo_sigjmp_t todo;
+    if (!sigsetjmp(*make_todo_sigjmp(&todo), false)) {
+        io_uring_sqe_set_data(sqe, (void*)&todo);
+        io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
+
+        io_uring_submit(&reactor->ring);
+
+        struct __kernel_timespec kts = { .tv_nsec = 32767 };
+
+        sqe = reactor_sqe(reactor);
+        io_uring_prep_link_timeout(sqe, &kts, 0
+            | IORING_TIMEOUT_BOOTTIME
+            );
+        io_uring_sqe_set_data(sqe, NULL);
+
+        reactor_enter_core(reactor);
+    }
+}
+
+void
 reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct timespec when) {
     assert(reactor->reserved >= 1);
 
