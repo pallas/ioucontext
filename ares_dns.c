@@ -22,11 +22,7 @@ iou_ares_sock_state_cb(void *data, int fd, int read, int write) {
             | (write ? EPOLLOUT : 0),
         .data.fd = fd,
     };
-
-    if (event.events)
-        TRY(iou_epoll_set, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
-    else
-        TRY(iou_epoll_del, iou_ares_data->reactor, iou_ares_data->epfd, fd);
+    TRY(iou_epoll_mod, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
 }
 
 static ares_socket_t
@@ -40,13 +36,16 @@ iou_ares_asocket(int domain, int type, int protocol, void * user_data) {
     if (!(O_NONBLOCK & flags))
         fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
+    struct epoll_event event = { .data.fd = fd };
+    TRY(iou_epoll_add, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
+
     return fd;
 }
 
 int
 iou_ares_aclose(ares_socket_t fd, void * user_data) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
-    assert(-ENOENT == iou_epoll_del(iou_ares_data->reactor, iou_ares_data->epfd, fd));
+    TRY(iou_epoll_del, iou_ares_data->reactor, iou_ares_data->epfd, fd);
     return ERRNO(iou_close, iou_ares_data->reactor, fd);
 }
 
