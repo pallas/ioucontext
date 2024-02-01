@@ -109,7 +109,7 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
         .waiters = 0,
     };
 
-    struct ares_options iou_options = *options;
+    struct ares_options iou_options = options ? *options : (struct ares_options) { };
 
     assert(!(optmask & ARES_OPT_SOCK_STATE_CB));
     iou_options.sock_state_cb = iou_ares_sock_state_cb;
