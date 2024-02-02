@@ -35,6 +35,7 @@ int iou_ares__wait(iou_ares_future_t * result, ...);
 
 struct ares_addrinfo;
 struct ares_addrinfo_hints;
+struct ares_addrinfo_node;
 
 typedef struct iou_ares_addr_result_s {
     iou_ares_future_t future;
@@ -48,6 +49,9 @@ iou_ares_addr_result_t * iou_ares_addrinfo(
     const char *name, const char *service,
     const struct ares_addrinfo_hints *hints,
     iou_ares_addr_result_t * result);
+
+int iou_ares_dial(reactor_t *, struct ares_addrinfo *addrinfo, struct timespec delta);
+int iou_ares_dial_node(reactor_t *, struct ares_addrinfo_node *node, struct timespec delta);
 
 typedef struct iou_ares_name_result_s {
     iou_ares_future_t future;

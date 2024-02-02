@@ -270,4 +270,29 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
     return 0;
 }
 
+int
+iou_ares_dial(reactor_t * reactor, struct ares_addrinfo *addrinfo, struct timespec delta) {
+    for (struct ares_addrinfo_node *node = addrinfo->nodes ; node ; node = node->ai_next) {
+        int fd = iou_ares_dial_node(reactor, node, delta);
+        if (fd >= 0)
+            return fd;
+    }
+    return -ENETUNREACH;
+}
+
+int
+iou_ares_dial_node(reactor_t * reactor, struct ares_addrinfo_node *node, struct timespec delta) {
+    int fd = iou_socket(reactor, node->ai_family, node->ai_socktype, node->ai_protocol);
+    if (fd < 0)
+        return fd;
+
+    int r = iou_connect(reactor, fd, node->ai_addr, node->ai_addrlen, delta);
+    if (r < 0) {
+        iou_close_fast(reactor, fd);
+        return r;
+    }
+
+    return fd;
+}
+
 //
