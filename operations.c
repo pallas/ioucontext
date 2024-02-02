@@ -82,12 +82,39 @@ iou_close_fast(reactor_t * reactor, int fd) {
 }
 
 int
-iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t addrlen, const struct timespec delta) {
     assert(reactor);
 
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_connect(sqe, sockfd, addr, addrlen);
-    reactor_promise(reactor, sqe);
+    switch (timespec_when(normalize_timespec(delta))) {
+
+    case -1: {
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_connect(sqe, sockfd, addr, addrlen);
+        reactor_promise(reactor, sqe);
+        break;
+        }
+
+    case 0: {
+        reactor_reserve_sqes(reactor, 2);
+
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_connect(sqe, sockfd, addr, addrlen);
+        reactor_promise_nonchalant(reactor, sqe);
+        break;
+        }
+
+    case 1: {
+        struct timespec when = reify_timespec(delta);
+        reactor_reserve_sqes(reactor, 2);
+
+        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+        io_uring_prep_connect(sqe, sockfd, addr, addrlen);
+        reactor_promise_impatient(reactor, sqe, when);
+        break;
+        }
+
+    default: abort();
+    }
 
     return reactor->result;
 }

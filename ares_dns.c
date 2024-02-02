@@ -55,7 +55,7 @@ iou_ares_aconnect(ares_socket_t fd,
     void * user_data)
 {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
-    return ERRNO(iou_connect, iou_ares_data->reactor, fd, addr, addr_len);
+    return ERRNO(iou_connect, iou_ares_data->reactor, fd, addr, addr_len, timespec_block);
 }
 
 ares_ssize_t

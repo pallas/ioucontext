@@ -25,7 +25,7 @@ void iou_cancel_fd_all(reactor_t *, int fd);
 void iou_cancel_fd_any(reactor_t *, int fd);
 int iou_close(reactor_t *, int fd);
 void iou_close_fast(reactor_t *, int fd);
-int iou_connect(reactor_t *, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+int iou_connect(reactor_t *, int sockfd, const struct sockaddr *addr, socklen_t addrlen, const struct timespec delta);
 int iou_epoll_add(reactor_t *, int epfd, int fd, struct epoll_event *event);
 int iou_epoll_ctl(reactor_t *, int epfd, int op, int fd, struct epoll_event *event);
 int iou_epoll_del(reactor_t *, int epfd, int fd);
