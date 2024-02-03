@@ -156,8 +156,6 @@ iou_ares_addrinfo(iou_ares_data_t * data, const char *name, const char *service,
     return result;
 }
 
-#include <stdio.h>
-
 static void
 iou_ares_nameinfo_callback(void *arg, int status, int timeouts, char *node, char *service) {
     iou_ares_name_result_t * result = (iou_ares_name_result_t *)arg;
