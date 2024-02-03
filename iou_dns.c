@@ -17,16 +17,17 @@ forward_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
     if (ARES_SUCCESS != result.status)
         return;
 
-    for (struct ares_addrinfo_cname *cnames = result.addrinfo->cnames ; cnames ; cnames = cnames->next)
-        iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", cnames->alias, cnames->name);
 
-    for (struct ares_addrinfo_node *nodes = result.addrinfo->nodes ; nodes ; nodes = nodes->ai_next) {
+    for_ares_addrinfo_cnames(cname, *result.addrinfo)
+        iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", cname->alias, cname->name);
+
+    for_ares_addrinfo_nodes(node, *result.addrinfo) {
         char buf[sockaddr_address_size];
-        if (sockaddr_unparse(nodes->ai_addr, buf, sizeof buf))
+        if (sockaddr_unparse(node->ai_addr, buf, sizeof buf))
             iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", result.addrinfo->name, buf);
     }
 
-    ares_freeaddrinfo(result.addrinfo);
+    iou_ares_addr_free(&result);
 }
 
 void
@@ -42,8 +43,7 @@ reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * a
 
     iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", addr, result.node ? result.node : "");
 
-    free(result.node);
-    free(result.service);
+    iou_ares_name_free(&result);
 }
 
 void

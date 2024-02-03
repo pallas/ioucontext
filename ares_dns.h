@@ -21,6 +21,7 @@ typedef struct iou_ares_data_s {
 } iou_ares_data_t;
 
 ares_channel_t * iou_ares_get(reactor_t *, iou_ares_data_t * data, const struct ares_options * options, int optmask);
+void iou_ares_cancel(iou_ares_data_t * data);
 void iou_ares_put(iou_ares_data_t * data);
 
 typedef struct todo_sigjmp_s todo_sigjmp_t;
@@ -53,6 +54,13 @@ iou_ares_addr_result_t * iou_ares_addrinfo(
 int iou_ares_dial(reactor_t *, struct ares_addrinfo *addrinfo, struct timespec delta);
 int iou_ares_dial_node(reactor_t *, struct ares_addrinfo_node *node, struct timespec delta);
 
+#define for_ares_addrinfo_cnames(CNAME, ADDRINFO) \
+    for (struct ares_addrinfo_cname * (CNAME) = (ADDRINFO).cnames ; (CNAME) ; (CNAME) = (CNAME)->next)
+#define for_ares_addrinfo_nodes(NODE, ADDRINFO) \
+    for (struct ares_addrinfo_node * (NODE) = (ADDRINFO).nodes ; (NODE) ; (NODE) = (NODE)->ai_next)
+
+void iou_ares_addr_free(iou_ares_addr_result_t * result);
+
 typedef struct iou_ares_name_result_s {
     iou_ares_future_t future;
     int status;
@@ -66,6 +74,8 @@ iou_ares_name_result_t * iou_ares_nameinfo(
     const struct sockaddr * sockaddr, socklen_t socklen,
     int flags,
     iou_ares_name_result_t * result);
+
+void iou_ares_name_free(iou_ares_name_result_t * result);
 
 #ifdef __cplusplus
 }

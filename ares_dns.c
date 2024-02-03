@@ -120,6 +120,11 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
 }
 
 void
+iou_ares_cancel(iou_ares_data_t * data) {
+    ares_cancel(data->channel);
+}
+
+void
 iou_ares_put(iou_ares_data_t * data) {
     ares_destroy(data->channel);
     assert(0 == data->waiters);
@@ -156,6 +161,13 @@ iou_ares_addrinfo(iou_ares_data_t * data, const char *name, const char *service,
     return result;
 }
 
+void
+iou_ares_addr_free(iou_ares_addr_result_t * result) {
+    assert(!result->future.data);
+    if (ARES_SUCCESS == result->status && result->addrinfo)
+        ares_freeaddrinfo(result->addrinfo);
+}
+
 static void
 iou_ares_nameinfo_callback(void *arg, int status, int timeouts, char *node, char *service) {
     iou_ares_name_result_t * result = (iou_ares_name_result_t *)arg;
@@ -175,6 +187,15 @@ iou_ares_nameinfo(iou_ares_data_t * data, const struct sockaddr *sockaddr, sockl
     };
     ares_getnameinfo(data->channel, sockaddr, socklen, flags, iou_ares_nameinfo_callback, result);
     return result;
+}
+
+void
+iou_ares_name_free(iou_ares_name_result_t * result) {
+    assert(!result->future.data);
+    if (ARES_SUCCESS == result->status) {
+        free(result->node);
+        free(result->service);
+    }
 }
 
 static struct timespec
@@ -270,7 +291,7 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
 
 int
 iou_ares_dial(reactor_t * reactor, struct ares_addrinfo *addrinfo, struct timespec delta) {
-    for (struct ares_addrinfo_node *node = addrinfo->nodes ; node ; node = node->ai_next) {
+    for_ares_addrinfo_nodes(node, *addrinfo) {
         int fd = iou_ares_dial_node(reactor, node, delta);
         if (fd >= 0)
             return fd;
