@@ -8,6 +8,7 @@
 #include "macros.h"
 #include "operations.h"
 #include "reactor.h"
+#include "rustls_tls.h"
 #include "sockaddr.h"
 #include "timespec.h"
 

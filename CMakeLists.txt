@@ -24,6 +24,7 @@ set(${PROJECT_NAME}_OBJECTS
 	jump_queue
 	operations
 	reactor
+	rustls_tls
 	sockaddr
 	stack
 	timespec
@@ -41,6 +42,7 @@ set(${PROJECT_NAME}_HEADERS
 	macros
 	operations
 	reactor
+	rustls_tls
 	sockaddr
 	timespec
         )
@@ -51,6 +53,7 @@ set(${PROJECT_NAME}_EXECUTABLES
 	iou_dns
 	iou_port7
 	iou_timers
+	iou_tls
         )
 
 # tests link the static library and are not installed
@@ -89,6 +92,10 @@ endif()
 find_library(LIBCARES cares)
 target_link_libraries(${PROJECT_NAME}-static ${LIBCARES})
 target_link_libraries(${PROJECT_NAME}-shared ${LIBCARES})
+
+find_library(LIBRUSTLS rustls)
+target_link_libraries(${PROJECT_NAME}-static ${LIBRUSTLS})
+target_link_libraries(${PROJECT_NAME}-shared ${LIBRUSTLS})
 
 install(TARGETS
         ${PROJECT_NAME}-static
