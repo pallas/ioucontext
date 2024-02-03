@@ -163,6 +163,12 @@ iou_exchangeat(reactor_t * reactor, int dirfd, const char *oldpath, const char *
     return iou_renameat(reactor, dirfd, oldpath, dirfd, newpath, RENAME_EXCHANGE);
 }
 
+bool
+iou_exists(reactor_t * reactor, const char *pathname) {
+    struct statx buf;
+    return !iou_statx(reactor, pathname, &buf);
+}
+
 int
 iou_fadvise(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
     assert(reactor);

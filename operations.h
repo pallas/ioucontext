@@ -33,6 +33,7 @@ int iou_epoll_mod(reactor_t *, int epfd, int fd, struct epoll_event *event);
 int iou_epoll_set(reactor_t *, int epfd, int fd, struct epoll_event *event);
 int iou_exchange(reactor_t *, const char *oldpath, const char *newpath);
 int iou_exchangeat(reactor_t *, int dirfd, const char *oldpath, const char *newpath);
+bool iou_exists(reactor_t *, const char *pathname);
 int iou_fadvise(reactor_t *, int fd, off_t offset, off_t len, int advice);
 int iou_fallocate(reactor_t *, int fd, int mode, off_t offset, off_t len);
 int iou_fdatasync(reactor_t *, int fd);
