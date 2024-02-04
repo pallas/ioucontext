@@ -147,7 +147,11 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
             break;
 
         if (sockaddr_unparse((struct sockaddr*)&ss, s, sizeof s))
-            iou_printf(reactor, STDERR_FILENO, "tcp accept %s port %d\n", s, port);
+            iou_printf(reactor, STDERR_FILENO, "tcp accept %s port %d\n", s, (int)(
+                ss.ss_family == AF_INET ? ntohs(((struct sockaddr_in*)&ss)->sin_port) :
+                ss.ss_family == AF_INET6 ? ntohs(((struct sockaddr_in6*)&ss)->sin6_port) :
+                0
+            ));
 
         reactor_fiber(handler, reactor, afd);
     }
