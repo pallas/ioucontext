@@ -121,7 +121,7 @@ udp_service(reactor_t * reactor, const char * name, uint16_t port) {
 }
 
 void
-tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler)()) {
+tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler)(reactor_t *, int)) {
     struct sockaddr_storage ss;
     if (!sockaddr_parse(&ss, name, port))
         abort();
