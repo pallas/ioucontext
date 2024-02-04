@@ -54,6 +54,7 @@ set(${PROJECT_NAME}_EXECUTABLES
 	iou_port7
 	iou_timers
 	iou_tls
+	iou_tlsd
         )
 
 # tests link the static library and are not installed
