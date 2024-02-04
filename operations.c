@@ -830,6 +830,13 @@ iou_statxat(reactor_t * reactor, int dirfd, const char *pathname, int flags, uns
     io_uring_prep_statx(sqe, dirfd, pathname, flags | AT_EMPTY_PATH, mask, statxbuf);
     reactor_promise(reactor, sqe);
 
+#ifdef HAVE_MEMCHECK_H
+    if (0 == reactor->result)
+        VALGRIND_MAKE_MEM_DEFINED(statxbuf, sizeof *statxbuf);
+    else
+        VALGRIND_MAKE_MEM_UNDEFINED(statxbuf, sizeof *statxbuf);
+#endif
+
     return reactor->result;
 }
 
