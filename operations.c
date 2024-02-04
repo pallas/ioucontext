@@ -166,7 +166,7 @@ iou_exchangeat(reactor_t * reactor, int dirfd, const char *oldpath, const char *
 bool
 iou_exists(reactor_t * reactor, const char *pathname) {
     struct statx buf;
-    return !iou_statx(reactor, pathname, &buf);
+    return !iou_statxat(reactor, AT_FDCWD, pathname, 0, STATX_ALL, &buf);
 }
 
 int
