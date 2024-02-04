@@ -164,6 +164,22 @@ iou_rustls_log_callback(void *userdata, const struct rustls_log_params *params) 
 }
 
 struct rustls_connection *
+iou_rustls_accept(reactor_t * reactor, int fd, const struct rustls_server_config *config) {
+    struct rustls_connection *connection;
+    rustls_result result = rustls_server_connection_new(config, &connection);
+    if (RUSTLS_RESULT_OK != result)
+        return NULL;
+
+    if (iou_rustls_handshake(reactor, fd, connection)) {
+        iou_close_fast(reactor, fd);
+        rustls_connection_free(connection);
+        return NULL;
+    }
+
+    return connection;
+}
+
+struct rustls_connection *
 iou_rustls_connect(reactor_t * reactor, int fd, struct rustls_client_config_builder *config_builder, const char *host) {
     const struct rustls_client_config *config = rustls_client_config_builder_build(config_builder);
 

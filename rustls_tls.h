@@ -12,8 +12,10 @@ extern "C" {
 typedef struct reactor_s reactor_t;
 typedef int rustls_io_result;
 struct rustls_connection;
+struct rustls_server_config;
 struct rustls_client_config_builder;
 
+struct rustls_connection * iou_rustls_accept(reactor_t *, int fd, const struct rustls_server_config *);
 struct rustls_connection * iou_rustls_connect(reactor_t *, int fd, struct rustls_client_config_builder *, const char * host);
 
 ssize_t iou_rustls_read(reactor_t *, int fd, struct rustls_connection *, uint8_t *buf, size_t len);
