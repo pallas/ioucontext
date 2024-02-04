@@ -36,6 +36,7 @@ int iou_exchangeat(reactor_t *, int dirfd, const char *oldpath, const char *newp
 bool iou_exists(reactor_t *, const char *pathname);
 int iou_fadvise(reactor_t *, int fd, off_t offset, off_t len, int advice);
 int iou_fallocate(reactor_t *, int fd, int mode, off_t offset, off_t len);
+ssize_t iou_fd_size(reactor_t *, int fd);
 int iou_fdatasync(reactor_t *, int fd);
 int iou_fgetxattr(reactor_t *, int fd, const char *name, void *value, size_t size);
 void iou_flush(reactor_t *);

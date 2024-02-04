@@ -191,6 +191,17 @@ iou_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
     return reactor->result;
 }
 
+ssize_t
+iou_fd_size(reactor_t * reactor, int fd) {
+    struct statx buf;
+
+    int result = iou_statxat(reactor, fd, "", AT_EMPTY_PATH, STATX_SIZE, &buf);
+    if (result < 0)
+        return result;
+
+    return buf.stx_size;
+}
+
 int
 iou_fdatasync(reactor_t * reactor, int fd) {
     assert(reactor);
