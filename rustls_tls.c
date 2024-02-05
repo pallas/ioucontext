@@ -48,9 +48,13 @@ iou_rustls_read(reactor_t * reactor, int fd, struct rustls_connection * connecti
     size_t n;
 
     rustls_result result;
+    rustls_io_result io_result;
     do {
         result = rustls_connection_read(connection, buf, len, &n);
-    } while (RUSTLS_RESULT_PLAINTEXT_EMPTY == result && !iou_rustls_tls_in_fd(reactor, fd, connection));
+    } while (RUSTLS_RESULT_PLAINTEXT_EMPTY == result && !(io_result = iou_rustls_tls_in_fd(reactor, fd, connection)));
+
+    if (RUSTLS_RESULT_PLAINTEXT_EMPTY == result)
+        return io_result;
 
     if (RUSTLS_RESULT_UNEXPECTED_EOF == result)
         return -EPIPE;
