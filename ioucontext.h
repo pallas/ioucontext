@@ -6,6 +6,7 @@
 #include "ares_dns.h"
 #include "fiber.h"
 #include "macros.h"
+#include "mutex.h"
 #include "operations.h"
 #include "reactor.h"
 #include "rustls_tls.h"

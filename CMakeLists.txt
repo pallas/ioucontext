@@ -22,6 +22,7 @@ set(${PROJECT_NAME}_OBJECTS
 	ares_dns
 	fiber
 	jump_queue
+	mutex
 	operations
 	reactor
 	rustls_tls
@@ -40,6 +41,7 @@ set(${PROJECT_NAME}_HEADERS
 	fiber
 	ioucontext
 	macros
+	mutex
 	operations
 	reactor
 	rustls_tls
