@@ -38,8 +38,13 @@ jump_queue_enqueue(jump_queue_t * jq, jump_chain_t * jc) {
     assert(jc->fun);
     assert(!jc->next);
 
-    *jq->tail = jc;
-    jq->tail = &jc->next;
+    if (jump_queue_empty(jq)) {
+        jq->head = jc;
+        jq->tail = &jc->next;
+    } else {
+        *jq->tail = jc;
+        jq->tail = &jc->next;
+    }
 
     assert(!jump_queue_empty(jq));
 }
@@ -52,9 +57,6 @@ jump_queue_dequeue(jump_queue_t * jq) {
     jq->head = jc->next;
     jc->next = NULL;
 
-    if (jump_queue_empty(jq))
-        jump_queue_reset(jq);
-
     assert(jc->fun);
     return jc;
 }
@@ -65,7 +67,8 @@ jump_queue_requeue(jump_queue_t * jq, jump_chain_t * jc) {
     assert(!jc->next);
 
     if (jump_queue_empty(jq)) {
-        jump_queue_enqueue(jq, jc);
+        jq->head = jc;
+        jq->tail = &jc->next;
     } else {
         jc->next = jq->head;
         jq->head = jc;
