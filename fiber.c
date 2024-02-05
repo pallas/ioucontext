@@ -18,6 +18,7 @@ typedef struct fiber_s {
 
 static void
 fiber_put(fiber_t *f) {
+    f->reactor->current = NULL;
     reactor_stack_put(f->reactor, f->full_stack);
     reactor_enter_core(f->reactor);
     abort();
@@ -51,13 +52,18 @@ fiber_get(reactor_t *reactor) {
     fiber->bounce.uc_link = NULL;
     makecontext(&fiber->bounce, (void(*)())fiber_bounce, 1, fiber);
 
-    ucontext_t * main_context = make_todo_ucontext(&fiber->todo);
+    ucontext_t * main_context = make_todo_ucontext(&fiber->todo, fiber);
     main_context->uc_stack = main_stack;
     main_context->uc_link = &fiber->bounce;
 
     reactor_schedule(reactor, &fiber->todo.jump);
 
     return main_context;
+}
+
+void
+fiber_switch(fiber_t *f) {
+    f->reactor->current = f;
 }
 
 //

@@ -15,7 +15,7 @@ typedef struct todo_ucontext_s {
     struct ucontext_t uc;
 } todo_ucontext_t;
 
-struct ucontext_t * make_todo_ucontext(todo_ucontext_t * todo);
+struct ucontext_t * make_todo_ucontext(todo_ucontext_t * todo, fiber_t * fiber);
 
 #ifdef __cplusplus
 }

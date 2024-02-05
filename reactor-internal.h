@@ -29,6 +29,7 @@ typedef struct reactor_s {
     unsigned sqes, cqes;
     int reserved;
     long int queue_depth;
+    fiber_t *current;
 } reactor_t;
 
 void reactor_enter_core(reactor_t *);

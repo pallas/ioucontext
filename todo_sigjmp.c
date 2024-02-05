@@ -10,11 +10,12 @@ sigjmp_done(void * buf) {
 }
 
 sigjmp_buf *
-make_todo_sigjmp(todo_sigjmp_t * todo) {
+make_todo_sigjmp(todo_sigjmp_t * todo, fiber_t * fiber) {
     explicit_bzero(&todo->buf, sizeof todo->buf);
     todo->jump = (jump_chain_t) {
         .fun = sigjmp_done,
         .arg = &todo->buf,
+        .fib = fiber,
     };
     assert(todo->jump.next == NULL);
     return &todo->buf;

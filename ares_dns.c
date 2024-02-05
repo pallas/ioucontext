@@ -276,7 +276,7 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
         } else {
             todo_sigjmp_t todo;
             future->todo = &todo;
-            if (!sigsetjmp(*make_todo_sigjmp(&todo), false))
+            if (!sigsetjmp(*make_todo_sigjmp(&todo, data->reactor->current), false))
                 reactor_enter_core(data->reactor);
 
             --data->waiters;

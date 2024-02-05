@@ -4,9 +4,14 @@
 #include <assert.h>
 #include <stddef.h>
 
+typedef struct fiber_s fiber_t;
+void fiber_switch(fiber_t *);
+
 void
 jump_invoke(jump_chain_t * jc) {
     assert(jc->fun);
+    if (jc->fib)
+        fiber_switch(jc->fib);
     jc->fun(jc->arg);
 }
 

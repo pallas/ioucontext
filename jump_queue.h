@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+typedef struct fiber_s fiber_t;
 typedef void * jump_argument;
 typedef void (*jump_function)(jump_argument);
 
@@ -15,6 +16,7 @@ typedef struct jump_chain_s {
     struct jump_chain_s * next;
     jump_function fun;
     jump_argument arg;
+    fiber_t *fib;
 } jump_chain_t;
 
 void jump_invoke(jump_chain_t *);

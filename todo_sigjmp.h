@@ -14,7 +14,7 @@ typedef struct todo_sigjmp_s {
     sigjmp_buf buf;
 } todo_sigjmp_t;
 
-sigjmp_buf * make_todo_sigjmp(todo_sigjmp_t * todo);
+sigjmp_buf * make_todo_sigjmp(todo_sigjmp_t * todo, fiber_t * fiber);
 
 #ifdef __cplusplus
 }

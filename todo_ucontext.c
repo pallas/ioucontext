@@ -12,12 +12,13 @@ ucontext_done(void * buf) {
 }
 
 struct ucontext_t *
-make_todo_ucontext(todo_ucontext_t * todo) {
+make_todo_ucontext(todo_ucontext_t * todo, fiber_t * fiber) {
     explicit_bzero(&todo->uc, sizeof todo->uc);
     TRY(getcontext, &todo->uc);
     todo->jump = (jump_chain_t) {
         .fun = ucontext_done,
         .arg = &todo->uc,
+        .fib = fiber,
     };
     assert(todo->jump.next == NULL);
     return &todo->uc;

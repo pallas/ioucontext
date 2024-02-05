@@ -53,6 +53,7 @@ reactor_set(reactor_t * reactor) {
     reactor->cookie_eat = NULL;
     reactor->result = 0;
     reactor->sqes = reactor->cqes = reactor->reserved = 0;
+    reactor->current = NULL;
 }
 
 reactor_t *
@@ -74,6 +75,7 @@ reactor_get() {
 static void
 reactor_put(reactor_t * reactor) {
     assert(!reactor_running(reactor));
+    assert(!reactor->current);
     if (reactor->cookie_eat)
         reactor->cookie_eat(reactor->cookie);
     io_uring_unregister_ring_fd(&reactor->ring);
@@ -162,7 +164,7 @@ reactor_enter_core(reactor_t * reactor) {
 void
 reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo), false)) {
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         io_uring_sqe_set_data(sqe, (void*)&todo);
         reactor_enter_core(reactor);
     }
@@ -173,7 +175,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
     assert(reactor->reserved >= 1);
 
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo), false)) {
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         io_uring_sqe_set_data(sqe, (void*)&todo);
         io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
 
@@ -196,7 +198,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
     assert(reactor->reserved >= 1);
 
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo), false)) {
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         io_uring_sqe_set_data(sqe, (void*)&todo);
         io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
 
@@ -241,7 +243,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
 static void
 reactor_defer(reactor_t * reactor) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo), false)) {
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         jump_queue_enqueue(&reactor->todos, &todo.jump);
         reactor_enter_core(reactor);
     }
@@ -250,7 +252,7 @@ reactor_defer(reactor_t * reactor) {
 static void
 reactor_refer(reactor_t * reactor) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo), false)) {
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         jump_queue_requeue(&reactor->todos, &todo.jump);
         reactor_enter_core(reactor);
     }
