@@ -379,12 +379,20 @@ iou_pread(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offse
     reactor_promise(reactor, sqe);
 
 #ifdef HAVE_MEMCHECK_H
-    if (reactor->result > 0) {
-        assert(reactor->result <= nbytes);
-        VALGRIND_MAKE_MEM_DEFINED(buf, reactor->result);
-        VALGRIND_MAKE_MEM_UNDEFINED(buf + reactor->result, nbytes - reactor->result);
-    } else
-        VALGRIND_MAKE_MEM_UNDEFINED(buf, nbytes);
+    if (RUNNING_ON_VALGRIND) {
+        ssize_t bytes = reactor->result;
+        assert(bytes <= nbytes);
+        if (bytes > 0 && nbytes <= bytes) {
+            VALGRIND_MAKE_MEM_DEFINED(buf, nbytes);
+        } else if (bytes > 0) {
+            assert(bytes < nbytes);
+            VALGRIND_MAKE_MEM_DEFINED(buf, bytes);
+            VALGRIND_MAKE_MEM_UNDEFINED(buf + bytes, nbytes - bytes);
+            bytes = 0;
+        } else {
+            VALGRIND_MAKE_MEM_UNDEFINED(buf, nbytes);
+        }
+    }
 #endif
 
     return reactor->result;
@@ -442,12 +450,19 @@ iou_recvfrom(reactor_t * reactor, int socket, void *buffer, size_t length, int f
     reactor_promise(reactor, sqe);
 
 #ifdef HAVE_MEMCHECK_H
-    if (reactor->result > 0) {
-        assert(reactor->result <= length);
-        VALGRIND_MAKE_MEM_DEFINED(buffer, reactor->result);
-        VALGRIND_MAKE_MEM_UNDEFINED(buffer + reactor->result, length - reactor->result);
-    } else
-        VALGRIND_MAKE_MEM_UNDEFINED(buffer, length);
+    if (RUNNING_ON_VALGRIND) {
+        ssize_t bytes = reactor->result;
+        if (bytes > 0 && length <= bytes) {
+            VALGRIND_MAKE_MEM_DEFINED(buffer, length);
+        } else if (bytes > 0) {
+            assert(bytes < length);
+            VALGRIND_MAKE_MEM_DEFINED(buffer, bytes);
+            VALGRIND_MAKE_MEM_UNDEFINED(buffer + bytes, length - bytes);
+            bytes = 0;
+        } else {
+            VALGRIND_MAKE_MEM_UNDEFINED(buffer, length);
+        }
+    }
 #endif
 
     return reactor->result;
@@ -831,10 +846,12 @@ iou_statxat(reactor_t * reactor, int dirfd, const char *pathname, int flags, uns
     reactor_promise(reactor, sqe);
 
 #ifdef HAVE_MEMCHECK_H
-    if (0 == reactor->result)
-        VALGRIND_MAKE_MEM_DEFINED(statxbuf, sizeof *statxbuf);
-    else
-        VALGRIND_MAKE_MEM_UNDEFINED(statxbuf, sizeof *statxbuf);
+    if (RUNNING_ON_VALGRIND) {
+        if (0 == reactor->result)
+            VALGRIND_MAKE_MEM_DEFINED(statxbuf, sizeof *statxbuf);
+        else
+            VALGRIND_MAKE_MEM_UNDEFINED(statxbuf, sizeof *statxbuf);
+    }
 #endif
 
     return reactor->result;
