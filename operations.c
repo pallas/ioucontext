@@ -398,6 +398,38 @@ iou_pread(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offse
     return reactor->result;
 }
 
+ssize_t
+iou_preadv(reactor_t * reactor, int fildes, const struct iovec *iov, int iovcnt, off_t offset, int flags) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_readv2(sqe, fildes, iov, iovcnt, offset, flags);
+    reactor_promise(reactor, sqe);
+
+#ifdef HAVE_MEMCHECK_H
+    if (RUNNING_ON_VALGRIND) {
+        ssize_t bytes = reactor->result;
+        for (int i = 0 ; i < iovcnt ; ++i) {
+            const void * buf = iov[i].iov_base;
+            size_t nbytes = iov[i].iov_len;
+            if (bytes > 0 && nbytes <= bytes) {
+                VALGRIND_MAKE_MEM_DEFINED(buf, nbytes);
+                bytes -= nbytes;
+            } else if (bytes > 0) {
+                assert(bytes < nbytes);
+                VALGRIND_MAKE_MEM_DEFINED(buf, bytes);
+                VALGRIND_MAKE_MEM_UNDEFINED(buf + bytes, nbytes - bytes);
+                bytes = 0;
+            } else {
+                VALGRIND_MAKE_MEM_UNDEFINED(buf, nbytes);
+            }
+        }
+    }
+#endif
+
+    return reactor->result;
+}
+
 int
 iou_printf(reactor_t * reactor, int fd, const char *format, ...) {
     int result;
@@ -414,6 +446,17 @@ iou_pwrite(reactor_t * reactor, int fildes, const void *buf, size_t nbytes, off_
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_write(sqe, fildes, buf, nbytes, offset);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
+ssize_t
+iou_pwritev(reactor_t * reactor, int fildes, const struct iovec *iov, int iovcnt, off_t offset, int flags) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_writev2(sqe, fildes, iov, iovcnt, offset, flags);
     reactor_promise(reactor, sqe);
 
     return reactor->result;

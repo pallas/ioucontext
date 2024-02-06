@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 struct epoll_event;
+struct iovec;
 struct sockaddr;
 struct statx;
 struct timespec;
@@ -54,8 +55,10 @@ bool iou_poll_hup(reactor_t *, int fd, const struct timespec delta);
 bool iou_poll_in(reactor_t *, int fd, const struct timespec delta);
 bool iou_poll_out(reactor_t *, int fd, const struct timespec delta);
 ssize_t iou_pread(reactor_t *, int fildes, void *buf, size_t nbyte, off_t offset);
+ssize_t iou_preadv(reactor_t *, int fildes, const struct iovec *iov, int iovcnt, off_t offset, int flags);
 int iou_printf(reactor_t *, int fd, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 ssize_t iou_pwrite(reactor_t *, int fildes, const void *buf, size_t nbyte, off_t offset);
+ssize_t iou_pwritev(reactor_t *, int fildes, const struct iovec *iov, int iovcnt, off_t offset, int flags);
 ssize_t iou_read(reactor_t *, int fildes, void *buf, size_t nbyte);
 ssize_t iou_recv(reactor_t *, int socket, void *buffer, size_t length, int flags);
 ssize_t iou_recvfrom(reactor_t *, int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t address_len);
