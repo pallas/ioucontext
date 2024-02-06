@@ -66,10 +66,10 @@ iou_rustls_read(reactor_t * reactor, int fd, struct rustls_connection * connecti
 }
 
 static rustls_io_result
-iou_rustls_write_callback(void *userdata, const uint8_t *buf, size_t n, size_t *out_n) {
+iou_rustls_write_vectored_callback(void *userdata, const struct rustls_iovec *iov, size_t n, size_t *out_n) {
     iou_rustls_iodata_t *iodata = (iou_rustls_iodata_t*)userdata;
 
-    ssize_t result = iou_write(iodata->reactor, iodata->fd, buf, n);
+    ssize_t result = iou_pwritev(iodata->reactor, iodata->fd, (const struct iovec *)iov, n, -1, 0);
 
     if (result < 0)
         return -result;
@@ -84,7 +84,7 @@ static rustls_io_result
 iou_rustls_tls_out_fd(reactor_t * reactor, int fd, struct rustls_connection * connection) {
     size_t n;
     iou_rustls_iodata_t iodata = { .reactor = reactor, .fd = fd };
-    rustls_io_result result = rustls_connection_write_tls(connection, iou_rustls_write_callback, &iodata, &n);
+    rustls_io_result result = rustls_connection_write_tls_vectored(connection, iou_rustls_write_vectored_callback, &iodata, &n);
     if (result)
         return result;
 
