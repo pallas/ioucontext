@@ -15,19 +15,20 @@ iou_mutex_taken(reactor_t * reactor, const iou_mutex_t * mutex) {
 
 bool
 iou_mutex_probe(reactor_t * reactor, iou_mutex_t * mutex) {
-    assert(reactor->current);
     assert(!mutex->owner || mutex->depth);
+    fiber_t * whoami = reactor->current ?: (fiber_t*)reactor;
 
     if (!mutex->owner)
-        mutex->owner = reactor->current;
+        mutex->owner = whoami;
 
-    return mutex->owner == reactor->current && ++mutex->depth;
+    return mutex->owner == whoami && ++mutex->depth;
 }
 
 void
 iou_mutex_enter(reactor_t * reactor, iou_mutex_t * mutex) {
-    assert(reactor->current);
     assert(!mutex->owner || mutex->depth);
+    fiber_t * whoami = reactor->current ?: (fiber_t*)reactor;
+
     while (!iou_mutex_probe(reactor, mutex)) {
         todo_sigjmp_t todo;
         if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
@@ -35,19 +36,21 @@ iou_mutex_enter(reactor_t * reactor, iou_mutex_t * mutex) {
             reactor_enter_core(reactor);
         }
     }
-    assert(mutex->owner == reactor->current);
+    assert(mutex->owner == whoami);
 }
 
 bool
 iou_mutex_owner(reactor_t * reactor, const iou_mutex_t * mutex) {
     assert(!mutex->owner || mutex->depth);
-    return mutex->owner == reactor->current;
+    fiber_t * whoami = reactor->current ?: (fiber_t*)reactor;
+    return mutex->owner == whoami;
 }
 
 void
 iou_mutex_leave(reactor_t * reactor, iou_mutex_t * mutex) {
     assert(mutex->depth);
-    assert(mutex->owner == reactor->current);
+    fiber_t * whoami = reactor->current ?: (fiber_t*)reactor;
+    assert(mutex->owner == whoami);
 
     if (--mutex->depth)
         return;
