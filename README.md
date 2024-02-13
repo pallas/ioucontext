@@ -47,6 +47,7 @@ eaten.
  * iou_port7 --- TCP & UDP echo service, à la [port7](https://github.com/pallas/port7)
  * iou_timers --- use multiple timerfds to make some noise
  * iou_tls --- STDIN -> TLS -> STDOUT
+ * iou_tlsd --- echo/TLS on 12345
 
 ## Extra
 
@@ -60,6 +61,7 @@ Thanks to some wonderful resources, including
  * [Lord of the io_uring](https://unixism.net/loti/),
  * [Fibers, Oh My!](https://graphitemaster.github.io/fibers/),
  * [dankwiki](https://nick-black.com/dankwiki/index.php/Io_uring),
+ * [Awesome io_uring](https://github.com/espoal/awesome-iouring),
  * [archlinux](https://man.archlinux.org/listing/extra/liburing/), &
  * [LWN.net](https://lwn.net/).
 
