@@ -142,6 +142,33 @@ iou_ares_future_fulfill(iou_ares_future_t * future) {
 }
 
 static void
+iou_ares_search_callback(void *arg, int status, int timeouts, unsigned char *abuf, int alen) {
+    iou_ares_result_t * result = (iou_ares_result_t *)arg;
+
+    result->status = abuf ? ares_dns_parse(abuf, alen, result->flags, &result->dnsrec) : status;
+    result->timeouts = timeouts;
+
+    iou_ares_future_fulfill(&result->future);
+}
+
+iou_ares_result_t *
+iou_ares_search(iou_ares_data_t * data, const char *name, int dnsclass, int type, unsigned int flags, iou_ares_result_t * result) {
+    *result = (iou_ares_result_t) {
+        .future = { .data = data },
+        .flags = flags,
+    };
+    ares_search(data->channel, name, dnsclass, type, iou_ares_search_callback, result);
+    return result;
+}
+
+void
+iou_ares_result_free(iou_ares_result_t * result) {
+    assert(!result->future.data);
+    if (ARES_SUCCESS == result->status && result->dnsrec)
+        ares_dns_record_destroy(result->dnsrec);
+}
+
+static void
 iou_ares_addrinfo_callback(void *arg, int status, int timeouts, struct ares_addrinfo *addrinfo) {
     iou_ares_addr_result_t * result = (iou_ares_addr_result_t *)arg;
 

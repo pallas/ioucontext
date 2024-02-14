@@ -34,6 +34,25 @@ typedef struct iou_ares_future_s {
 int iou_ares__wait(iou_ares_future_t * result, ...);
 #define iou_ares_wait(...) iou_ares__wait(__VA_ARGS__, (iou_ares_future_t *)NULL)
 
+struct ares_dns_record;
+
+typedef struct iou_ares_result_s {
+    iou_ares_future_t future;
+    int status;
+    int timeouts;
+    unsigned int flags;
+    struct ares_dns_record *dnsrec;
+} iou_ares_result_t;
+
+iou_ares_result_t * iou_ares_search(
+    iou_ares_data_t * data,
+    const char *name,
+    int dnsclass, int type,
+    unsigned int flags,
+    iou_ares_result_t * result);
+
+void iou_ares_result_free(iou_ares_result_t * result);
+
 struct ares_addrinfo;
 struct ares_addrinfo_hints;
 struct ares_addrinfo_node;
