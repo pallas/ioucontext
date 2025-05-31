@@ -185,7 +185,9 @@ iou_rustls_accept(reactor_t * reactor, int fd, const struct rustls_server_config
 
 struct rustls_connection *
 iou_rustls_connect(reactor_t * reactor, int fd, struct rustls_client_config_builder *config_builder, const char *host) {
-    const struct rustls_client_config *config = rustls_client_config_builder_build(config_builder);
+    const struct rustls_client_config *config;
+    if (RUSTLS_RESULT_OK != rustls_client_config_builder_build(config_builder, &config))
+        return NULL;
 
     struct rustls_connection *connection;
     rustls_result result = rustls_client_connection_new(config, host, &connection);

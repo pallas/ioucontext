@@ -218,7 +218,9 @@ main(int argc, char *argv[]) {
     while (certified_keys_size)
         rustls_certified_key_free(certified_keys[--certified_keys_size]);
 
-    ((cookie_t*)reactor_cookie(reactor))->server_config = rustls_server_config_builder_build(server_config_builder);
+    rustls_result result = rustls_server_config_builder_build(server_config_builder, &((cookie_t*)reactor_cookie(reactor))->server_config);
+    if (RUSTLS_RESULT_OK != result)
+        return result;
 
     sigset_t mask;
     sigemptyset(&mask);
