@@ -43,6 +43,8 @@ int iou_fgetxattr(reactor_t *, int fd, const char *name, void *value, size_t siz
 void iou_flush(reactor_t *);
 int iou_fsetxattr(reactor_t *, int fd, const char *name, const void *value, size_t size, int flags);
 int iou_fsync(reactor_t *, int fd);
+int iou_getsockopt(reactor_t *, int socket, int level, int option_name, void *option_value, socklen_t *option_len);
+int iou_getsockopt_int(reactor_t *, int socket, int level, int option_name);
 int iou_getxattr(reactor_t *, const char *path, const char *name, void *value, size_t size);
 int iou_link(reactor_t *, const char *oldpath, const char *newpath);
 int iou_linkat(reactor_t *, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
@@ -76,10 +78,14 @@ void iou_semaphore_put(reactor_t *, iou_semaphore_t);
 
 ssize_t iou_send(reactor_t *, int socket, const void *buffer, size_t length, int flags);
 ssize_t iou_sendto(reactor_t *, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
+int iou_setsockopt(reactor_t *, int socket, int level, int option_name, const void *option_value, socklen_t option_len);
+int iou_setsockopt_int(reactor_t *, int socket, int level, int option_name, const int option_value);
 int iou_setxattr(reactor_t *, const char *path, const char *name, const void *value, size_t size, int flags);
 int iou_shutdown(reactor_t *, int sockfd);
 int iou_shutdown_read(reactor_t *, int sockfd);
 int iou_shutdown_write(reactor_t *, int sockfd);
+int iou_siocinq(reactor_t *, int socket);
+int iou_siocoutq(reactor_t *, int socket);
 struct timespec iou_sleep(reactor_t *, const struct timespec delta);
 bool iou_sleep_absolute(reactor_t *, const struct timespec when);
 int iou_socket(reactor_t *, int domain, int type, int protocol);

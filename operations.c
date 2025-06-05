@@ -257,6 +257,30 @@ iou_fsync(reactor_t * reactor, int fd) {
 }
 
 int
+iou_getsockopt(reactor_t * reactor, int socket, int level, int option_name, void *option_value, socklen_t *option_len) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_GETSOCKOPT, socket, level, option_name, option_value, *option_len);
+    reactor_promise(reactor, sqe);
+
+    if (reactor->result < 0)
+        return reactor->result;
+
+    *option_len = reactor->result;
+    return 0;
+}
+
+int
+iou_getsockopt_int(reactor_t * reactor, int socket, int level, int option_name) {
+    int option_value;
+    socklen_t option_len = sizeof option_value;
+    int result = iou_getsockopt(reactor, socket, level, option_name, &option_value, &option_len);
+    assert(result < 0 || sizeof option_value == option_len);
+    return result < 0 ? result : option_value;
+}
+
+int
 iou_getxattr(reactor_t * reactor, const char *path, const char *name, void *value, size_t size) {
     assert(reactor);
 
@@ -663,6 +687,22 @@ iou_setxattr(reactor_t * reactor, const char *path, const char *name, const void
 }
 
 int
+iou_setsockopt(reactor_t * reactor, int socket, int level, int option_name, const void *option_value, socklen_t option_len) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SETSOCKOPT, socket, level, option_name, (void *)option_value, option_len);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
+int
+iou_setsockopt_int(reactor_t * reactor, int socket, int level, int option_name, int option_value) {
+    return iou_setsockopt(reactor, socket, level, option_name, &option_value, sizeof option_value);
+}
+
+int
 iou_shutdown(reactor_t * reactor, int sockfd) {
     assert(reactor);
 
@@ -690,6 +730,28 @@ iou_shutdown_write(reactor_t * reactor, int sockfd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_shutdown(sqe, sockfd, SHUT_WR);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
+int
+iou_siocinq(reactor_t * reactor, int socket) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SIOCINQ, socket, 0, 0, NULL, 0);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
+int
+iou_siocoutq(reactor_t * reactor, int socket) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SIOCOUTQ, socket, 0, 0, NULL, 0);
     reactor_promise(reactor, sqe);
 
     return reactor->result;
