@@ -561,6 +561,19 @@ iou_rmdir(reactor_t * reactor, const char *pathname) {
     return iou_rmdirat(reactor, AT_FDCWD, pathname);
 }
 
+int
+iou_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
+    assert(reactor);
+
+    VALGRIND_CHECK_STRING(pathname);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_unlinkat(sqe, dirfd, pathname, AT_REMOVEDIR);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
 iou_semaphore_t
 iou_semaphore_get(reactor_t * reactor, uint64_t value) {
     return (iou_semaphore_t)eventfd(value, EFD_CLOEXEC | EFD_SEMAPHORE);
@@ -634,17 +647,6 @@ void iou_semaphore_put(reactor_t * reactor, iou_semaphore_t semaphore) {
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_close(sqe, efd);
     reactor_future_fake(reactor, sqe);
-}
-
-int
-iou_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_unlinkat(sqe, dirfd, pathname, AT_REMOVEDIR);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
 }
 
 ssize_t
