@@ -43,6 +43,17 @@ iou_barrier(reactor_t * reactor) {
     reactor_future_fake(reactor, sqe);
 }
 
+int
+iou_bind(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_bind(sqe, sockfd, (struct sockaddr *)addr, addrlen);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
 void
 iou_cancel_fd_all(reactor_t * reactor, int fd) {
     assert(reactor);
@@ -304,6 +315,17 @@ int iou_linkat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdi
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_linkat(sqe, olddirfd, oldpath, newdirfd, newpath, flags);
+    reactor_promise(reactor, sqe);
+
+    return reactor->result;
+}
+
+int
+iou_listen(reactor_t * reactor, int sockfd, int backlog) {
+    assert(reactor);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_listen(sqe, sockfd, backlog);
     reactor_promise(reactor, sqe);
 
     return reactor->result;

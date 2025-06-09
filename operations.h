@@ -22,6 +22,7 @@ typedef struct reactor_s reactor_t;
 
 int iou_accept(reactor_t *, int fd, struct sockaddr *addr, socklen_t *addrlen);
 void iou_barrier(reactor_t *);
+int iou_bind(reactor_t *, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 void iou_cancel_fd_all(reactor_t *, int fd);
 void iou_cancel_fd_any(reactor_t *, int fd);
 int iou_close(reactor_t *, int fd);
@@ -48,6 +49,7 @@ int iou_getsockopt_int(reactor_t *, int socket, int level, int option_name);
 int iou_getxattr(reactor_t *, const char *path, const char *name, void *value, size_t size);
 int iou_link(reactor_t *, const char *oldpath, const char *newpath);
 int iou_linkat(reactor_t *, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
+int iou_listen(reactor_t *, int sockfd, int backlog);
 int iou_madvise(reactor_t *, void *addr, size_t len, int advice);
 int iou_mkdir(reactor_t *, const char *pathname, mode_t mode);
 int iou_mkdirat(reactor_t *, int dirfd, const char *pathname, mode_t mode);
