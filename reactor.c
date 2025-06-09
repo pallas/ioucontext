@@ -161,16 +161,17 @@ reactor_enter_core(reactor_t * reactor) {
         siglongjmp(*reactor->runner, true);
 }
 
-void
+int
 reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
     todo_sigjmp_t todo;
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         io_uring_sqe_set_data(sqe, (void*)&todo);
         reactor_enter_core(reactor);
     }
+    return reactor->result;
 }
 
-void
+int
 reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
     assert(reactor->reserved >= 1);
 
@@ -191,9 +192,10 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
         reactor_enter_core(reactor);
     }
+    return reactor->result;
 }
 
-void
+int
 reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct timespec when) {
     assert(reactor->reserved >= 1);
 
@@ -217,6 +219,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
 
         reactor_enter_core(reactor);
     }
+    return reactor->result;
 }
 
 void
