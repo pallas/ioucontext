@@ -44,6 +44,7 @@ void reactor_reserve_sqes(reactor_t *, size_t);
 unsigned reactor_inflight(const reactor_t *);
 bool reactor_todos(const reactor_t *);
 
+bool reactor_stack_has(reactor_t *);
 stack_t reactor_stack_get(reactor_t *);
 void reactor_stack_put(reactor_t *, stack_t);
 

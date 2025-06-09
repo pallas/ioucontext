@@ -304,11 +304,17 @@ typedef struct reactor_stack_cache_s {
     reactor_stack_cache_t *next;
 } reactor_stack_cache_t;
 
+bool
+reactor_stack_has(reactor_t * reactor) {
+    return reactor->stack_cache;
+}
+
 stack_t
 reactor_stack_get(reactor_t * reactor) {
-    assert(reactor->stack_cache);
+    assert(reactor_stack_has(reactor));
     stack_t stack = reactor->stack_cache->stack;
     reactor->stack_cache = reactor->stack_cache->next;
+    VALGRIND_MAKE_MEM_UNDEFINED(stack.ss_sp, stack.ss_size);
     return stack;
 }
 
@@ -316,6 +322,7 @@ void
 reactor_stack_put(reactor_t * reactor, stack_t stack) {
     reactor_stack_cache_t * entry = (reactor_stack_cache_t *)stack.ss_sp;
     stack_clear(stack);
+    VALGRIND_MAKE_MEM_NOACCESS(entry + 1, stack.ss_size - sizeof *entry);
     entry->stack = stack;
     entry->next = reactor->stack_cache;
     reactor->stack_cache = entry;

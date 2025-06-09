@@ -12,10 +12,6 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 
-#ifdef HAVE_MEMCHECK_H
-#include <valgrind/memcheck.h>
-#endif
-
 stack_t
 stack_get(size_t size) {
     const int prot = PROT_READ | PROT_WRITE;
@@ -24,9 +20,7 @@ stack_get(size_t size) {
         .ss_sp = TRY(mmap, NULL, size, prot, flags, -1, 0),
         .ss_size = size,
     };
-#ifdef HAVE_MEMCHECK_H
     s.ss_flags = VALGRIND_STACK_REGISTER(s.ss_sp, s.ss_sp + s.ss_size);
-#endif
     return s;
 }
 
@@ -98,9 +92,7 @@ stack_split(stack_t *s, size_t size, size_t align) {
 
 void
 stack_put(stack_t s) {
-#ifdef HAVE_MEMCHECK_H
     VALGRIND_STACK_DEREGISTER(s.ss_flags);
-#endif
     TRY(munmap, s.ss_sp, s.ss_size);
 }
 

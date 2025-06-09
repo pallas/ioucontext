@@ -2,15 +2,13 @@
 #define _GNU_SOURCE
 #include "arena.h"
 
+#include "macros.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
-#ifdef HAVE_MEMCHECK_H
-#include <valgrind/memcheck.h>
-#endif
 
 static size_t
 __attribute__((const))
@@ -204,9 +202,7 @@ arena_cull(arena_t * arena, void * data) {
     while (arena->current) {
         if (chunk_has(arena->current, data)) {
             arena->current->data = data;
-#ifdef HAVE_MEMCHECK_H
             VALGRIND_MAKE_MEM_UNDEFINED(data, chunk_left(arena->current));
-#endif
             return;
         }
         arena->current = chunk_put(arena->current);
