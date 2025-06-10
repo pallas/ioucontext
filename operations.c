@@ -1129,22 +1129,44 @@ iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
     return result;
 }
 
-pid_t
-iou_waitpid(reactor_t * reactor, pid_t pid, int *status, int options) {
-    int result;
+int
+iou_waitid(reactor_t * reactor, idtype_t idtype, id_t id, siginfo_t *infop, int options) {
+    assert(reactor);
 
-    if (status) {
-        VALGRIND_CHECK_MEM_IS_ADDRESSABLE(status, sizeof *status);
-        VALGRIND_MAKE_MEM_UNDEFINED(status, sizeof *status);
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(infop, sizeof *infop);
+
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_waitid(sqe, idtype, id, infop, options, 0);
+    reactor_promise(reactor, sqe);
+
+    if (0 == reactor->result)
+        VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(infop, sizeof *infop);
+
+    return reactor->result;
+}
+
+pid_t
+iou_waitpid(reactor_t * reactor, pid_t pid, int *wstatus, int options) {
+    idtype_t type = (WAIT_ANY == pid) ? P_ALL : (WAIT_MYPGRP == pid) ? P_PGID : P_PID;
+    id_t id = (WAIT_ANY != pid || WAIT_MYPGRP != pid) ? pid : 0;
+
+    siginfo_t infop = { };
+    int result = iou_waitid(reactor, type, id, &infop, options | WEXITED);
+    if (result < 0)
+        return result;
+
+    if (wstatus && infop.si_pid)
+    switch (infop.si_code) {
+    case CLD_EXITED:	*wstatus = W_EXITCODE(infop.si_status, 0); break;
+    case CLD_KILLED:	*wstatus = W_EXITCODE(0, infop.si_status); break;
+    case CLD_DUMPED:	*wstatus = W_EXITCODE(0, infop.si_status) | WCOREFLAG ; break;
+    case CLD_STOPPED:	*wstatus = W_STOPCODE(infop.si_status); break;
+    case CLD_TRAPPED:	*wstatus = W_STOPCODE(infop.si_status); break;
+    case CLD_CONTINUED:	*wstatus = __W_CONTINUED; break;
+    default: abort();
     }
 
-    while (!(result = waitpid(pid, status, options | WNOHANG)))
-        iou_yield(reactor);
-
-    if (status && result > 0)
-        VALGRIND_MAKE_MEM_DEFINED(status, sizeof *status);
-
-    return result;
+    return infop.si_pid;
 }
 
 ssize_t

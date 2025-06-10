@@ -3,6 +3,8 @@
 #define IOUCONTEXT_OPERATIONS_H
 
 #include <spawn.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -14,6 +16,7 @@ extern "C" {
 
 struct epoll_event;
 struct iovec;
+struct siginfo_t;
 struct sockaddr;
 struct statx;
 struct timespec;
@@ -107,7 +110,8 @@ ssize_t iou_tee(reactor_t *, int fd_in, int fd_out, size_t len);
 int iou_unlink(reactor_t *, const char *pathname);
 int iou_unlinkat(reactor_t *, int dirfd, const char *pathname);
 int iou_vprintf(reactor_t *, int fd, const char *format, va_list args);
-pid_t iou_waitpid(reactor_t *, pid_t, int *status, int options);
+int iou_waitid(reactor_t *, idtype_t idtype, id_t id, siginfo_t *infop, int options);
+pid_t iou_waitpid(reactor_t *, pid_t pid, int *wstatus, int options);
 ssize_t iou_write(reactor_t *, int fildes, const void *buf, size_t nbyte);
 void iou_yield(reactor_t *);
 
