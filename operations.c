@@ -28,12 +28,12 @@ iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrle
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_accept(sqe, fd, addr, addrlen, 0);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    if (addr && reactor->result > 0)
+    if (addr && result > 0)
         VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(addr, *addrlen);
 
-    return reactor->result;
+    return result;
 }
 
 void
@@ -54,9 +54,7 @@ iou_bind(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_bind(sqe, sockfd, (struct sockaddr *)addr, addrlen);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 void
@@ -83,9 +81,7 @@ iou_close(reactor_t * reactor, int fd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_close(sqe, fd);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 void
@@ -108,8 +104,7 @@ iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, sockle
     case -1: {
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_connect(sqe, sockfd, addr, addrlen);
-        reactor_promise(reactor, sqe);
-        break;
+        return reactor_promise(reactor, sqe);
         }
 
     case 0: {
@@ -117,8 +112,7 @@ iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, sockle
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_connect(sqe, sockfd, addr, addrlen);
-        reactor_promise_nonchalant(reactor, sqe);
-        break;
+        return reactor_promise_nonchalant(reactor, sqe);
         }
 
     case 1: {
@@ -127,14 +121,11 @@ iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, sockle
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_connect(sqe, sockfd, addr, addrlen);
-        reactor_promise_impatient(reactor, sqe, when);
-        break;
+        return reactor_promise_impatient(reactor, sqe, when);
         }
 
     default: abort();
     }
-
-    return reactor->result;
 }
 
 int
@@ -153,9 +144,7 @@ iou_epoll_ctl(reactor_t * reactor, int epfd, int op, int fd, struct epoll_event 
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_epoll_ctl(sqe, epfd, fd, op, event);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -198,9 +187,7 @@ iou_fadvise(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fadvise(sqe, fd, offset, len, advice);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -209,9 +196,7 @@ iou_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fallocate(sqe, fd, mode, offset, len);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 ssize_t
@@ -231,9 +216,7 @@ iou_fdatasync(reactor_t * reactor, int fd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fsync(sqe, fd, IORING_FSYNC_DATASYNC);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -246,11 +229,11 @@ iou_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fgetxattr(sqe, fd, name, value, size);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    VALGRIND_MAKE_BUFFER_DEFINED(value, reactor->result, size);
+    VALGRIND_MAKE_BUFFER_DEFINED(value, result, size);
 
-    return reactor->result;
+    return result;
 }
 
 void
@@ -272,9 +255,7 @@ iou_fsetxattr(reactor_t * reactor, int fd, const char *name, const void *value, 
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fsetxattr(sqe, fd, name, value, size, flags);
-    reactor_promise(reactor, sqe);
-
-     return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -283,9 +264,7 @@ iou_fsync(reactor_t * reactor, int fd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fsync(sqe, fd, 0);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -297,13 +276,13 @@ iou_getsockopt(reactor_t * reactor, int socket, int level, int option_name, void
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_GETSOCKOPT, socket, level, option_name, option_value, *option_len);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    if (reactor->result < 0)
-        return reactor->result;
+    if (result < 0)
+        return result;
 
-    VALGRIND_MAKE_BUFFER_DEFINED(option_value, reactor->result, *option_len);
-    *option_len = reactor->result;
+    VALGRIND_MAKE_BUFFER_DEFINED(option_value, result, *option_len);
+    *option_len = result;
 
     return 0;
 }
@@ -328,11 +307,11 @@ iou_getxattr(reactor_t * reactor, const char *path, const char *name, void *valu
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_getxattr(sqe, name, value, path, size);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    VALGRIND_MAKE_BUFFER_DEFINED(reactor->result, reactor->result, size);
+    VALGRIND_MAKE_BUFFER_DEFINED(result, result, size);
 
-    return reactor->result;
+    return result;
 }
 
 int
@@ -351,9 +330,7 @@ int iou_linkat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdi
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_linkat(sqe, olddirfd, oldpath, newdirfd, newpath, flags);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -362,9 +339,7 @@ iou_listen(reactor_t * reactor, int sockfd, int backlog) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_listen(sqe, sockfd, backlog);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -373,9 +348,7 @@ iou_madvise(reactor_t * reactor, void *addr, size_t len, int advice) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_madvise(sqe, addr, len, advice);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -391,9 +364,7 @@ iou_mkdirat(reactor_t * reactor, int dirfd, const char *pathname, mode_t mode) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_mkdirat(sqe, dirfd, pathname, mode);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -409,9 +380,7 @@ iou_openat(reactor_t * reactor, int dirfd, const char *pathname, int flags, mode
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_openat(sqe, dirfd, pathname, flags, mode);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 static bool
@@ -423,8 +392,8 @@ iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec 
     case -1: {
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_poll_add(sqe, fd, mask);
-        reactor_promise(reactor, sqe);
-        break;
+        int result = reactor_promise(reactor, sqe);
+	return result > 0 && !!(result & mask);
         }
 
     case 0: {
@@ -432,8 +401,8 @@ iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec 
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_poll_add(sqe, fd, mask);
-        reactor_promise_nonchalant(reactor, sqe);
-        break;
+        int result = reactor_promise_nonchalant(reactor, sqe);
+	return result > 0 && !!(result & mask);
         }
 
     case 1: {
@@ -442,14 +411,12 @@ iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec 
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_poll_add(sqe, fd, mask);
-        reactor_promise_impatient(reactor, sqe, when);
-        break;
+        int result = reactor_promise_impatient(reactor, sqe, when);
+	return result > 0 && !!(result & mask);
         }
 
     default: abort();
     }
-
-    return reactor->result > 0 && !!(reactor->result & mask);
 }
 
 bool iou_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLRDHUP, delta); }
@@ -465,11 +432,11 @@ iou_pread(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offse
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_read(sqe, fildes, buf, nbytes, offset);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    VALGRIND_MAKE_BUFFER_DEFINED(buf, reactor->result, nbytes);
+    VALGRIND_MAKE_BUFFER_DEFINED(buf, result, nbytes);
 
-    return reactor->result;
+    return result;
 }
 
 ssize_t
@@ -487,10 +454,10 @@ iou_preadv(reactor_t * reactor, int fildes, const struct iovec *iov, int iovcnt,
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_readv2(sqe, fildes, iov, iovcnt, offset, flags);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
     if (RUNNING_ON_VALGRIND) {
-        ssize_t bytes = reactor->result;
+        ssize_t bytes = result;
         for (int i = 0 ; i < iovcnt && bytes > 0 ; ++i) {
             const void * buf = iov[i].iov_base;
             size_t nbytes = iov[i].iov_len;
@@ -499,7 +466,7 @@ iou_preadv(reactor_t * reactor, int fildes, const struct iovec *iov, int iovcnt,
         }
     }
 
-    return reactor->result;
+    return result;
 }
 
 int
@@ -520,9 +487,7 @@ iou_pwrite(reactor_t * reactor, int fildes, const void *buf, size_t nbytes, off_
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_write(sqe, fildes, buf, nbytes, offset);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 ssize_t
@@ -539,9 +504,7 @@ iou_pwritev(reactor_t * reactor, int fildes, const struct iovec *iov, int iovcnt
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_writev2(sqe, fildes, iov, iovcnt, offset, flags);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 ssize_t
@@ -576,11 +539,11 @@ iou_recvfrom(reactor_t * reactor, int socket, void *buffer, size_t length, int f
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_recvmsg(sqe, socket, &msg, flags);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    VALGRIND_MAKE_BUFFER_DEFINED(buffer, reactor->result, length);
+    VALGRIND_MAKE_BUFFER_DEFINED(buffer, result, length);
 
-    return reactor->result;
+    return result;
 }
 
 int
@@ -602,9 +565,7 @@ iou_renameat(reactor_t * reactor, int olddirfd, const char *oldpath, int newdirf
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_renameat(sqe, olddirfd, oldpath, newdirfd, newpath, flags);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -620,9 +581,7 @@ iou_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_unlinkat(sqe, dirfd, pathname, AT_REMOVEDIR);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 iou_semaphore_t
@@ -642,9 +601,9 @@ iou_semaphore_wait(reactor_t * reactor , iou_semaphore_t semaphore, const struct
     case -1: {
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_read(sqe, efd, &value, sizeof value, -1);
-        reactor_promise(reactor, sqe);
+        int result = reactor_promise(reactor, sqe);
 
-        return reactor->result == sizeof value ? value : reactor->result;
+        return result == sizeof value ? value : result;
         }
 
     case 0: {
@@ -655,11 +614,11 @@ iou_semaphore_wait(reactor_t * reactor , iou_semaphore_t semaphore, const struct
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_readv2(sqe, efd, &iov, 1, -1, RWF_NOWAIT);
-        reactor_promise(reactor, sqe);
+        int result = reactor_promise(reactor, sqe);
 
-        return reactor->result == sizeof value ? value :
-            reactor->result == -EAGAIN ? 0 :
-            reactor->result;
+        return result == sizeof value ? value :
+            result == -EAGAIN ? 0 :
+            result;
         }
 
     case 1: {
@@ -668,11 +627,11 @@ iou_semaphore_wait(reactor_t * reactor , iou_semaphore_t semaphore, const struct
 
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_read(sqe, efd, &value, sizeof value, -1);
-        reactor_promise_impatient(reactor, sqe, when);
+        int result = reactor_promise_impatient(reactor, sqe, when);
 
-        return reactor->result == sizeof value ? value :
-            reactor->result == -ECANCELED ? 0 :
-            reactor->result;
+        return result == sizeof value ? value :
+            result == -ECANCELED ? 0 :
+            result;
         }
 
     default: abort();
@@ -726,9 +685,7 @@ iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, 
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_sendmsg(sqe, socket, &msg, flags);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -740,9 +697,7 @@ iou_setxattr(reactor_t * reactor, const char *path, const char *name, const void
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_setxattr(sqe, name, value, path, size, flags);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -753,9 +708,7 @@ iou_setsockopt(reactor_t * reactor, int socket, int level, int option_name, cons
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SETSOCKOPT, socket, level, option_name, (void *)option_value, option_len);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -769,9 +722,7 @@ iou_shutdown(reactor_t * reactor, int sockfd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_shutdown(sqe, sockfd, SHUT_RDWR);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -780,9 +731,7 @@ iou_shutdown_read(reactor_t * reactor, int sockfd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_shutdown(sqe, sockfd, SHUT_RD);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -791,9 +740,7 @@ iou_shutdown_write(reactor_t * reactor, int sockfd) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_shutdown(sqe, sockfd, SHUT_WR);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -802,9 +749,7 @@ iou_siocinq(reactor_t * reactor, int socket) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SIOCINQ, socket, 0, 0, NULL, 0);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -813,9 +758,7 @@ iou_siocoutq(reactor_t * reactor, int socket) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SIOCOUTQ, socket, 0, 0, NULL, 0);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 struct timespec
@@ -860,9 +803,8 @@ iou_sleep_absolute(reactor_t * reactor, const struct timespec when) {
             | IORING_TIMEOUT_ABS
             | IORING_TIMEOUT_BOOTTIME
         );
-        reactor_promise(reactor, sqe);
 
-        switch (reactor->result) {
+        switch (reactor_promise(reactor, sqe)) {
         case 0: continue;
         case -ETIME: return true;
         default: return false;
@@ -876,9 +818,7 @@ iou_socket(reactor_t * reactor, int domain, int type, int protocol) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_socket(sqe, domain, type, protocol, 0);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 static void
@@ -993,9 +933,7 @@ iou_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_splice(sqe, fd_in, off_in ? *off_in : -1, fd_out, off_out ? *off_out : -1, len, SPLICE_F_MORE | SPLICE_F_MOVE);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -1012,12 +950,12 @@ iou_statxat(reactor_t * reactor, int dirfd, const char *pathname, int flags, uns
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_statx(sqe, dirfd, pathname, flags | AT_EMPTY_PATH, mask, statxbuf);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    if (0 == reactor->result)
+    if (0 == result)
         VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(statxbuf, sizeof *statxbuf);
 
-    return reactor->result;
+    return result;
 }
 
 int
@@ -1039,9 +977,7 @@ iou_symlinkat(reactor_t * reactor, const char *path1, int fd, const char *path2)
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_symlinkat(sqe, path1, fd, path2);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -1052,9 +988,7 @@ iou_sync_file_range(reactor_t * reactor, int fd, off_t offset, off_t nbytes, boo
     const unsigned int flags_no_wait = SYNC_FILE_RANGE_WRITE;
     const unsigned int flags_yes_wait = SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER;
     io_uring_prep_sync_file_range(sqe, fd, offset, nbytes, wait ? flags_yes_wait : flags_no_wait);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 ssize_t
@@ -1063,9 +997,7 @@ iou_tee(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_tee(sqe, fd_in, fd_out, len, SPLICE_F_MORE);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 int
@@ -1081,9 +1013,7 @@ iou_unlinkat(reactor_t * reactor, int dirfd, const char *pathname) {
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_unlinkat(sqe, dirfd, pathname, 0);
-    reactor_promise(reactor, sqe);
-
-    return reactor->result;
+    return reactor_promise(reactor, sqe);
 }
 
 typedef struct _iou_vprintf_cookie_s {
@@ -1137,12 +1067,12 @@ iou_waitid(reactor_t * reactor, idtype_t idtype, id_t id, siginfo_t *infop, int 
 
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_waitid(sqe, idtype, id, infop, options, 0);
-    reactor_promise(reactor, sqe);
+    int result = reactor_promise(reactor, sqe);
 
-    if (0 == reactor->result)
+    if (0 == result)
         VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(infop, sizeof *infop);
 
-    return reactor->result;
+    return result;
 }
 
 pid_t
