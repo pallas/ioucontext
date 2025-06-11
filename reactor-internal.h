@@ -25,7 +25,6 @@ typedef struct reactor_s {
     reactor_stack_cache_t * stack_cache;
     void *cookie;
     reactor_cookie_eat_t cookie_eat;
-    int result;
     unsigned sqes, cqes;
     int reserved;
     long int queue_depth;
@@ -42,7 +41,6 @@ void reactor_schedule(reactor_t *, jump_chain_t *);
 struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
 void reactor_reserve_sqes(reactor_t *, size_t);
 unsigned reactor_inflight(const reactor_t *);
-bool reactor_todos(const reactor_t *);
 
 bool reactor_stack_has(reactor_t *);
 stack_t reactor_stack_get(reactor_t *);

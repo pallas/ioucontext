@@ -51,7 +51,6 @@ reactor_set(reactor_t * reactor) {
     reactor->stack_cache = NULL;
     reactor->cookie = NULL;
     reactor->cookie_eat = NULL;
-    reactor->result = 0;
     reactor->sqes = reactor->cqes = reactor->reserved = 0;
     reactor->current = NULL;
 }
@@ -121,18 +120,17 @@ static unsigned
 reactor_cqes(reactor_t * reactor) {
     assert(reactor);
 
-    io_uring_submit_and_wait(&reactor->ring, !reactor_todos(reactor));
+    io_uring_submit_and_wait(&reactor->ring, !!jump_queue_empty(&reactor->todos));
 
-    jump_chain_t * todo = NULL;
     unsigned base = reactor->cqes;
 
     unsigned head;
     struct io_uring_cqe * cqe;
     io_uring_for_each_cqe(&reactor->ring, head, cqe) {
         ++reactor->cqes;
-        if ((todo = (jump_chain_t*)io_uring_cqe_get_data(cqe))) {
-            reactor->result = cqe->res;
-            break;
+        if (jump_chain_t * todo = (jump_chain_t*)io_uring_cqe_get_data(cqe)) {
+            todo->result = cqe->res;
+            jump_queue_enqueue(&reactor->todos, todo);
         }
     }
 
@@ -140,8 +138,8 @@ reactor_cqes(reactor_t * reactor) {
     if (delta > 0)
         io_uring_cq_advance(&reactor->ring, delta);
 
-    if (todo)
-        jump_invoke(todo);
+    if (!jump_queue_empty(&reactor->todos))
+        jump_invoke(jump_queue_dequeue(&reactor->todos));
 
     return delta;
 }
@@ -150,7 +148,7 @@ void
 reactor_enter_core(reactor_t * reactor) {
     while (reactor_runnable(reactor)) {
 
-        while (reactor_todos(reactor) && io_uring_sq_space_left(&reactor->ring))
+        while (!jump_queue_empty(&reactor->todos) && io_uring_sq_space_left(&reactor->ring))
             jump_invoke(jump_queue_dequeue(&reactor->todos));
 
         if (reactor_inflight(reactor))
@@ -168,7 +166,7 @@ reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
         io_uring_sqe_set_data(sqe, (void*)&todo);
         reactor_enter_core(reactor);
     }
-    return reactor->result;
+    return jump_result(&todo.jump);
 }
 
 int
@@ -192,7 +190,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
         reactor_enter_core(reactor);
     }
-    return reactor->result;
+    return jump_result(&todo.jump);
 }
 
 int
@@ -219,7 +217,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
 
         reactor_enter_core(reactor);
     }
-    return reactor->result;
+    return jump_result(&todo.jump);
 }
 
 void
@@ -268,7 +266,7 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
     if (UNLIKELY(reactor->queue_depth < n))
         abort();
 
-    if (reactor_todos(reactor) || io_uring_cq_has_overflow(&reactor->ring))
+    if (!jump_queue_empty(&reactor->todos) || io_uring_cq_has_overflow(&reactor->ring))
         reactor_defer(reactor);
 
     while (io_uring_sq_space_left(&reactor->ring) < n) {
@@ -299,8 +297,7 @@ reactor_sqe(reactor_t * reactor) {
 
 bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
 unsigned reactor_inflight(const reactor_t * reactor) { return reactor->sqes - reactor->cqes; }
-bool reactor_todos(const reactor_t * reactor) { return !jump_queue_empty(&reactor->todos); }
-bool reactor_runnable(const reactor_t * reactor) { return reactor_inflight(reactor) > 0 || reactor_todos(reactor); }
+bool reactor_runnable(const reactor_t * reactor) { return reactor_inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos); }
 
 typedef struct reactor_stack_cache_s {
     stack_t stack;

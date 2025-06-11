@@ -15,6 +15,11 @@ jump_invoke(jump_chain_t * jc) {
     jc->fun(jc->arg);
 }
 
+jump_result_t
+jump_result(const jump_chain_t * jc) {
+    return jc->result;
+}
+
 bool
 jump_queue_empty(const jump_queue_t * jq) {
     return !jq->head;

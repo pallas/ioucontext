@@ -11,15 +11,18 @@ extern "C" {
 typedef struct fiber_s fiber_t;
 typedef void * jump_argument;
 typedef void (*jump_function)(jump_argument);
+typedef int jump_result_t;
 
 typedef struct jump_chain_s {
     struct jump_chain_s * next;
     jump_function fun;
     jump_argument arg;
     fiber_t *fib;
+    jump_result_t result;
 } jump_chain_t;
 
 void jump_invoke(jump_chain_t *);
+jump_result_t jump_result(const jump_chain_t *);
 
 typedef struct jump_queue_s {
     jump_chain_t * head;
