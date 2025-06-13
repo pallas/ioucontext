@@ -84,7 +84,7 @@ iou_ares_asendv(ares_socket_t fd,
 
     ares_ssize_t n = 0;
     for (int i = 0 ; i < len ; ++i) {
-        int r = ERRNO(iou_send, iou_ares_data->reactor, fd, data[i].iov_base, data[i].iov_len, 0);
+        int r = send(fd, data[i].iov_base, data[i].iov_len, 0);
         if (r < 0)
             return r;
         n += r;
