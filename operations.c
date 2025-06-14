@@ -574,7 +574,7 @@ iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, 
         .msg_namelen = dest_len,
     };
 
-    return IOU(reactor, sendmsg, socket, &msg, flags);
+    return IOU(reactor, sendmsg_zc, socket, &msg, flags);
 }
 
 int

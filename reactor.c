@@ -129,8 +129,13 @@ reactor_cqes(reactor_t * reactor) {
     io_uring_for_each_cqe(&reactor->ring, head, cqe) {
         ++reactor->cqes;
         if (jump_chain_t * todo = (jump_chain_t*)io_uring_cqe_get_data(cqe)) {
-            todo->result = cqe->res;
-            jump_queue_enqueue(&reactor->todos, todo);
+            if (!(cqe->flags & IORING_CQE_F_NOTIF) || cqe->res < 0)
+                todo->result = cqe->res;
+
+            if (!(cqe->flags & IORING_CQE_F_MORE))
+                jump_queue_enqueue(&reactor->todos, todo);
+            else
+                ++reactor->sqes;
         }
     }
 
