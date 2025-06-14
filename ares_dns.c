@@ -25,6 +25,21 @@ iou_ares_sock_state_cb(void *data, int fd, int read, int write) {
     TRY(iou_epoll_mod, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
 }
 
+static void
+iou_ares_pending_write_cb(void *data) {
+    iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)data;
+    assert(!iou_ares_data->pending_writes);
+    ++iou_ares_data->pending_writes;
+}
+
+static void
+iou_ares_flush_pending_writes(iou_ares_data_t * iou_ares_data) {
+    if (iou_ares_data->pending_writes) do {
+        assert(iou_ares_data->pending_writes == 1);
+        ares_process_pending_write(iou_ares_data->channel);
+    } while (--iou_ares_data->pending_writes);
+}
+
 static ares_socket_t
 iou_ares_asocket(int domain, int type, int protocol, void * user_data) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
@@ -107,6 +122,7 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
         .reactor = reactor,
         .epfd = TRY(epoll_create1, EPOLL_CLOEXEC),
         .waiters = 0,
+        .pending_writes = 0,
     };
 
     struct ares_options iou_options = options ? *options : (struct ares_options) { };
@@ -117,6 +133,7 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
 
     TRY(ares_init_options, &data->channel, &iou_options, optmask | ARES_OPT_SOCK_STATE_CB);
     ares_set_socket_functions(data->channel, &iou_ares_socket_functions, data);
+    ares_set_pending_write_cb(data->channel, iou_ares_pending_write_cb, data);
 }
 
 void
@@ -128,6 +145,7 @@ void
 iou_ares_put(iou_ares_data_t * data) {
     ares_destroy(data->channel);
     assert(0 == data->waiters);
+    assert(0 == data->pending_writes);
     close(data->epfd);
 }
 
@@ -235,6 +253,8 @@ timeval_to_timespec(struct timeval tv) {
 
 static bool
 iou_ares_resolve_any(iou_ares_data_t * data) {
+    iou_ares_flush_pending_writes(data);
+
     struct timeval timeout = { };
     if (!ares_timeout(data->channel, NULL, &timeout))
         return false;

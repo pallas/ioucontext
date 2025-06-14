@@ -18,6 +18,7 @@ typedef struct iou_ares_data_s {
     ares_channel_t * channel;
     int epfd;
     unsigned waiters;
+    unsigned pending_writes;
 } iou_ares_data_t;
 
 ares_channel_t * iou_ares_get(reactor_t *, iou_ares_data_t * data, const struct ares_options * options, int optmask);
