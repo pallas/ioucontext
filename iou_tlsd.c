@@ -63,11 +63,6 @@ signal_handler(reactor_t * reactor, sigset_t *mask) {
     }
 }
 
-void
-setsockint(int fd, int opt, int val) {
-    TRY(setsockopt, fd, SOL_SOCKET, opt, &val, sizeof val);
-}
-
 typedef void(*tls_handler_t)(reactor_t *, int, struct rustls_connection *);
 
 void
@@ -86,9 +81,9 @@ tls_service(reactor_t * reactor, const char * name, uint16_t port, const struct 
     LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
-    setsockint(fd, SO_REUSEADDR, true);
-    TRY(bind, fd, (struct sockaddr *)&ss, sizeof ss);
-    TRY(listen, fd, 64);
+    TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEADDR, true);
+    TRY(iou_bind, reactor, fd, (struct sockaddr *)&ss, sizeof ss);
+    TRY(iou_listen, reactor, fd, 64);
 
     while (true) {
         socklen_t len = sizeof ss;
