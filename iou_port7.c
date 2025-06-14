@@ -72,20 +72,6 @@ max_pipe(int fd) {
 }
 
 void
-setsockint(int fd, int opt, int val) {
-    TRY(setsockopt, fd, SOL_SOCKET, opt, &val, sizeof val);
-}
-
-int
-getsockint(int fd, int opt) {
-    int val;
-    socklen_t len = sizeof val;
-    TRY(getsockopt, fd, SOL_SOCKET, opt, &val, &len);
-    assert(len == sizeof val);
-    return val;
-}
-
-void
 udp_service(reactor_t * reactor, const char * name, uint16_t port) {
     struct sockaddr_storage ss;
     if (!sockaddr_parse(&ss, name, port))
@@ -101,8 +87,8 @@ udp_service(reactor_t * reactor, const char * name, uint16_t port) {
     LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
-    setsockint(fd, SO_REUSEADDR, true);
-    TRY(bind, fd, (struct sockaddr *)&ss, sizeof ss);
+    TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEADDR, true);
+    TRY(iou_bind, reactor, fd, (struct sockaddr *)&ss, sizeof ss);
 
     while (iou_poll_in(reactor, fd, timespec_block)) {
         char buf[65535];
@@ -136,9 +122,9 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
     LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
-    setsockint(fd, SO_REUSEADDR, true);
-    TRY(bind, fd, (struct sockaddr *)&ss, sizeof ss);
-    TRY(listen, fd, 64);
+    TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEADDR, true);
+    TRY(iou_bind, reactor, fd, (struct sockaddr *)&ss, sizeof ss);
+    TRY(iou_listen, reactor, fd, 64);
 
     while (true) {
         socklen_t len = sizeof ss;
@@ -169,11 +155,11 @@ tcp_handler(reactor_t * reactor, int fd) {
     int pipes[2];
     TRY(pipe, pipes);
 
-    int rcvbuf = getsockint(fd, SO_RCVBUF);
+    int rcvbuf = iou_getsockopt_int(reactor, fd, SOL_SOCKET, SO_RCVBUF);
     if (rcvbuf > fcntl(pipes[1], F_GETPIPE_SZ))
         fcntl(pipes[1], F_SETPIPE_SZ, rcvbuf);
 
-    int sndbuf = getsockint(fd, SO_SNDBUF);
+    int sndbuf = iou_getsockopt_int(reactor, fd, SOL_SOCKET, SO_SNDBUF);
     if (sndbuf > fcntl(pipes[0], F_GETPIPE_SZ))
         fcntl(pipes[0], F_SETPIPE_SZ, sndbuf);
 
