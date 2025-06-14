@@ -31,6 +31,7 @@ void iou_cancel_fd_any(reactor_t *, int fd);
 int iou_close(reactor_t *, int fd);
 void iou_close_fast(reactor_t *, int fd);
 int iou_connect(reactor_t *, int sockfd, const struct sockaddr *addr, socklen_t addrlen, const struct timespec delta);
+int iou_discard(reactor_t *, int fd, off_t offset, off_t len);
 int iou_epoll_add(reactor_t *, int epfd, int fd, struct epoll_event *event);
 int iou_epoll_ctl(reactor_t *, int epfd, int op, int fd, struct epoll_event *event);
 int iou_epoll_del(reactor_t *, int epfd, int fd);
@@ -47,6 +48,7 @@ int iou_fgetxattr(reactor_t *, int fd, const char *name, void *value, size_t siz
 void iou_flush(reactor_t *);
 int iou_fsetxattr(reactor_t *, int fd, const char *name, const void *value, size_t size, int flags);
 int iou_fsync(reactor_t *, int fd);
+int iou_ftruncate(reactor_t *, int fildes, off_t length);
 int iou_getsockopt(reactor_t *, int socket, int level, int option_name, void *option_value, socklen_t *option_len);
 int iou_getsockopt_int(reactor_t *, int socket, int level, int option_name);
 int iou_getxattr(reactor_t *, const char *path, const char *name, void *value, size_t size);

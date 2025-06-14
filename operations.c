@@ -126,6 +126,11 @@ iou_connect(reactor_t * reactor, int sockfd, const struct sockaddr *addr, sockle
 }
 
 int
+iou_discard(reactor_t * reactor, int fd, off_t offset, off_t len) {
+    return IOU(reactor, cmd_discard, fd, offset, len);
+}
+
+int
 iou_epoll_add(reactor_t * reactor, int epfd, int fd, struct epoll_event *event) {
     return iou_epoll_ctl(reactor, epfd, EPOLL_CTL_ADD, fd, event);
 }
@@ -234,6 +239,11 @@ iou_fsetxattr(reactor_t * reactor, int fd, const char *name, const void *value, 
 int
 iou_fsync(reactor_t * reactor, int fd) {
     return IOU(reactor, fsync, fd, 0);
+}
+
+int
+iou_ftruncate(reactor_t * reactor, int fildes, off_t length) {
+    return IOU(reactor, ftruncate, fildes, length);
 }
 
 int
