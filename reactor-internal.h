@@ -29,6 +29,7 @@ typedef struct reactor_s {
     int reserved;
     long int queue_depth;
     fiber_t *current;
+    struct jump_chain_s *pivot;
 } reactor_t;
 
 void reactor_enter_core(reactor_t *);

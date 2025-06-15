@@ -16,6 +16,8 @@ void reactor_run(reactor_t *);
 bool reactor_runnable(const reactor_t *);
 bool reactor_running(const reactor_t *);
 
+reactor_t * reactor_synchronize(reactor_t *);
+
 typedef void (*reactor_cookie_eat_t)(void *cookie);
 void * reactor_cookie(reactor_t *);
 bool reactor_cookie_eat(reactor_t *);
