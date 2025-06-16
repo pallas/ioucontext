@@ -238,22 +238,32 @@ iou_ares_future_fulfill(iou_ares_future_t * future) {
 }
 
 static void
-iou_ares_search_callback(void *arg, int status, int timeouts, unsigned char *abuf, int alen) {
+iou_ares_dnsrec_callback(void *arg, ares_status_t status, size_t timeouts, const struct ares_dns_record *dnsrec) {
     iou_ares_result_t * result = (iou_ares_result_t *)arg;
 
-    result->status = abuf ? ares_dns_parse(abuf, alen, result->flags, &result->dnsrec) : status;
+    result->status = status;
     result->timeouts = timeouts;
+    if (ARES_SUCCESS == result->status)
+        result->dnsrec = ares_dns_record_duplicate(dnsrec);
 
     iou_ares_future_fulfill(&result->future);
 }
 
 iou_ares_result_t *
-iou_ares_search(iou_ares_data_t * data, const char *name, int dnsclass, int type, unsigned int flags, iou_ares_result_t * result) {
+iou_ares_query(iou_ares_data_t * data, const char *name, ares_dns_class_t dnsclass, ares_dns_rec_type_t type, unsigned short *qid, iou_ares_result_t * result) {
     *result = (iou_ares_result_t) {
         .future = { .data = data },
-        .flags = flags,
     };
-    ares_search(data->channel, name, dnsclass, type, iou_ares_search_callback, result);
+    result->status = ares_query_dnsrec(data->channel, name, dnsclass, type, iou_ares_dnsrec_callback, result, qid);
+    return result;
+}
+
+iou_ares_result_t *
+iou_ares_search(iou_ares_data_t * data, const struct ares_dns_record *dnsrec, iou_ares_result_t * result) {
+    *result = (iou_ares_result_t) {
+        .future = { .data = data },
+    };
+    result->status = ares_search_dnsrec(data->channel, dnsrec, iou_ares_dnsrec_callback, result);
     return result;
 }
 

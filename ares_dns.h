@@ -2,6 +2,8 @@
 #ifndef IOUCONTEXT_ARES_DNS_H
 #define IOUCONTEXT_ARES_DNS_H
 
+#include <ares.h>
+#include <ares_nameser.h>
 #include <stdarg.h>
 #include <sys/socket.h>
 
@@ -41,15 +43,20 @@ typedef struct iou_ares_result_s {
     iou_ares_future_t future;
     int status;
     int timeouts;
-    unsigned int flags;
     struct ares_dns_record *dnsrec;
 } iou_ares_result_t;
 
-iou_ares_result_t * iou_ares_search(
+iou_ares_result_t * iou_ares_query(
     iou_ares_data_t * data,
     const char *name,
-    int dnsclass, int type,
-    unsigned int flags,
+    ares_dns_class_t dnsclass,
+    ares_dns_rec_type_t type,
+    unsigned short *qid,
+    iou_ares_result_t * result);
+
+iou_ares_result_t * iou_ares_search(
+    iou_ares_data_t * data,
+    const struct ares_dns_record *dnsrec,
     iou_ares_result_t * result);
 
 void iou_ares_result_free(iou_ares_result_t * result);
