@@ -8,21 +8,23 @@
 #include "todo_sigjmp.h"
 
 #include <ares.h>
-#include <string.h>
 #include <assert.h>
+#include <net/if.h>
+#include <netinet/tcp.h>
+#include <string.h>
 #include <sys/epoll.h>
 
 static void
-iou_ares_sock_state_cb(void *data, int fd, int read, int write) {
+iou_ares_sock_state_cb(void *data, int socket_fd, int readable, int writable) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)data;
 
     struct epoll_event event = {
         .events = 0
-            | (read ? EPOLLIN : 0)
-            | (write ? EPOLLOUT : 0),
-        .data.fd = fd,
+            | (readable ? EPOLLIN : 0)
+            | (writable ? EPOLLOUT : 0),
+        .data.fd = socket_fd,
     };
-    TRY(iou_epoll_mod, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
+    TRY(iou_epoll_mod, iou_ares_data->reactor, iou_ares_data->epfd, socket_fd, &event);
 }
 
 static void
@@ -41,15 +43,11 @@ iou_ares_flush_pending_writes(iou_ares_data_t * iou_ares_data) {
 }
 
 static ares_socket_t
-iou_ares_asocket(int domain, int type, int protocol, void * user_data) {
+iou_ares_asocket(int domain, int type, int protocol, void *user_data) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
     int fd = ERRNO(iou_socket, iou_ares_data->reactor, domain, type, protocol);
     if (fd < 0)
-        return fd;
-
-    int flags = fcntl(fd, F_GETFL);
-    if (!(O_NONBLOCK & flags))
-        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+        return ARES_SOCKET_BAD;
 
     struct epoll_event event = { .data.fd = fd };
     TRY(iou_epoll_add, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
@@ -57,63 +55,143 @@ iou_ares_asocket(int domain, int type, int protocol, void * user_data) {
     return fd;
 }
 
-int
-iou_ares_aclose(ares_socket_t fd, void * user_data) {
+static int
+iou_ares_aclose(ares_socket_t sock, void *user_data) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
-    TRY(iou_epoll_del, iou_ares_data->reactor, iou_ares_data->epfd, fd);
-    return ERRNO(iou_close, iou_ares_data->reactor, fd);
+    assert(ARES_SOCKET_BAD != sock);
+    TRY(iou_epoll_del, iou_ares_data->reactor, iou_ares_data->epfd, sock);
+    return ERRNO(iou_close, iou_ares_data->reactor, sock);
 }
 
-int
-iou_ares_aconnect(ares_socket_t fd,
-    const struct sockaddr * addr, ares_socklen_t addr_len,
-    void * user_data)
+static int
+iou_ares_asetsockopt(ares_socket_t sock,
+    ares_socket_opt_t opt,
+    const void *val, ares_socklen_t val_size,
+    void *user_data)
 {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
-    return ERRNO(iou_connect, iou_ares_data->reactor, fd, addr, addr_len, timespec_block);
+
+    switch (opt) {
+
+    case ARES_SOCKET_OPT_SENDBUF_SIZE:
+        assert(val_size == sizeof(int));
+        return ERRNO(iou_setsockopt, iou_ares_data->reactor, sock, SOL_SOCKET, SO_SNDBUF, val, val_size);
+
+    case ARES_SOCKET_OPT_RECVBUF_SIZE:
+        assert(val_size == sizeof(int));
+        return ERRNO(iou_setsockopt, iou_ares_data->reactor, sock, SOL_SOCKET, SO_RCVBUF, val, val_size);
+
+    case ARES_SOCKET_OPT_BIND_DEVICE:
+        return ERRNO(iou_setsockopt, iou_ares_data->reactor, sock, SOL_SOCKET, SO_BINDTODEVICE, val, val_size);
+
+    case ARES_SOCKET_OPT_TCP_FASTOPEN:
+        assert(val_size == sizeof(ares_bool_t));
+        return ERRNO(iou_setsockopt_int, iou_ares_data->reactor, sock, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, ARES_TRUE == *(ares_bool_t*)val);
+
+    default:
+        errno = ENOPROTOOPT;
+        return -1;
+    }
 }
 
-ares_ssize_t
-iou_ares_arecvfrom(ares_socket_t fd,
-    void * buffer, size_t buf_size,
+static int
+iou_ares_aconnect(ares_socket_t sock,
+    const struct sockaddr *address, ares_socklen_t address_len,
+    unsigned int flags,
+    void *user_data)
+{
+    iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
+
+    if (flags & ARES_SOCKET_CONN_TCP_FASTOPEN) {
+        int r = ERRNO(iou_setsockopt_int, iou_ares_data->reactor, sock, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, true);
+        if (r < 0)
+            return r;
+    }
+
+    return ERRNO(iou_connect, iou_ares_data->reactor, sock, address, address_len, timespec_block);
+}
+
+static ares_ssize_t
+iou_ares_arecvfrom(ares_socket_t sock,
+    void *buffer, size_t length,
     int flags,
-    struct sockaddr * addr, ares_socklen_t * addr_len,
-    void * user_data)
+    struct sockaddr *address, ares_socklen_t *address_len,
+    void *user_data)
 {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
 
-    assert(addr_len || !addr);
-    assert(iou_poll_in(iou_ares_data->reactor, fd, timespec_zero));
-    return addr
-        ? ERRNO(iou_recvfrom, iou_ares_data->reactor, fd, buffer, buf_size, flags, addr, *addr_len)
-        : ERRNO(iou_recv, iou_ares_data->reactor, fd, buffer, buf_size, flags)
+    assert(!address || address_len);
+    assert(iou_poll_in(iou_ares_data->reactor, sock, timespec_zero));
+    return address
+        ? ERRNO(iou_recvfrom, iou_ares_data->reactor, sock, buffer, length, flags, address, *address_len)
+        : ERRNO(iou_recv, iou_ares_data->reactor, sock, buffer, length, flags)
         ;
 }
 
-ares_ssize_t
-iou_ares_asendv(ares_socket_t fd,
-    const struct iovec * data, int len,
-    void * user_data)
+static ares_ssize_t
+iou_ares_asendto(ares_socket_t sock,
+    const void *buffer, size_t length,
+    int flags,
+    const struct sockaddr *address, ares_socklen_t address_len,
+    void *user_data)
 {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
 
-    ares_ssize_t n = 0;
-    for (int i = 0 ; i < len ; ++i) {
-        int r = send(fd, data[i].iov_base, data[i].iov_len, 0);
-        if (r < 0)
-            return r;
-        n += r;
-    }
-
-    return n;
+    assert(!address || address_len);
+    assert(iou_poll_out(reactor_synchronize(iou_ares_data->reactor), sock, timespec_zero));
+    return address
+        ? ERRNO(iou_sendto, reactor_synchronize(iou_ares_data->reactor), sock, buffer, length, flags, address, address_len)
+        : ERRNO(iou_send, reactor_synchronize(iou_ares_data->reactor), sock, buffer, length, flags);
+        ;
 }
 
-static const struct ares_socket_functions iou_ares_socket_functions = {
+static int
+iou_ares_agetsockname(ares_socket_t sock,
+    struct sockaddr *address, ares_socklen_t *address_len,
+    void *user_data)
+{
+    return getsockname(sock, address, address_len);
+}
+
+static int
+iou_ares_abind(ares_socket_t sock,
+    unsigned int flags,
+    const struct sockaddr *address, socklen_t address_len,
+    void *user_data)
+{
+    iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
+    assert(!address || address_len);
+    return ERRNO(iou_bind, iou_ares_data->reactor, sock, address, address_len);
+}
+
+static unsigned int
+iou_ares_aif_nametoindex(const char *ifname, void *user_data) {
+    return if_nametoindex(ifname);
+}
+
+static const char *
+iou_ares_aif_indextoname(unsigned int ifindex,
+    char *ifname_buf, size_t ifname_buf_len,
+    void *user_data)
+{
+    if (UNLIKELY(ifname_buf_len < IFNAMSIZ))
+        return NULL;
+    assert(ifname_buf_len >= IFNAMSIZ);
+    return if_indextoname(ifindex, ifname_buf);
+}
+
+static const struct ares_socket_functions_ex iou_ares_socket_functions_ex = {
+    .version = 1,
     .asocket = iou_ares_asocket,
     .aclose = iou_ares_aclose,
+    .asetsockopt = iou_ares_asetsockopt,
     .aconnect = iou_ares_aconnect,
     .arecvfrom = iou_ares_arecvfrom,
-    .asendv = iou_ares_asendv,
+    .asendto = iou_ares_asendto,
+    .agetsockname = iou_ares_agetsockname,
+    .abind = iou_ares_abind,
+    .aif_nametoindex = iou_ares_aif_nametoindex,
+    .aif_indextoname = iou_ares_aif_indextoname,
 };
 
 ares_channel_t *
@@ -132,7 +210,7 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
     iou_options.sock_state_cb_data = data;
 
     TRY(ares_init_options, &data->channel, &iou_options, optmask | ARES_OPT_SOCK_STATE_CB);
-    ares_set_socket_functions(data->channel, &iou_ares_socket_functions, data);
+    ares_set_socket_functions_ex(data->channel, &iou_ares_socket_functions_ex, data);
     ares_set_pending_write_cb(data->channel, iou_ares_pending_write_cb, data);
 }
 
@@ -267,22 +345,23 @@ iou_ares_resolve_any(iou_ares_data_t * data) {
     struct epoll_event events[32];
     int nfds;
     do { } while ((nfds = epoll_wait(data->epfd, events, sizeof(events)/sizeof(*events), 0)) < 0 && errno == EINTR);
-    if (nfds < 0)
-        return false;
 
-    for (int i = 0 ; i < nfds ; ++i) {
-        int fd = events[i].data.fd;
-        bool read = events[i].events & EPOLLIN;
-        bool write = events[i].events & EPOLLOUT;
+    if (nfds == 0)
+        iou_yield(data->reactor);
+    else if (nfds > 0)
+        for (int i = 0 ; i < nfds ; ++i) {
+            int fd = events[i].data.fd;
+            bool read = events[i].events & EPOLLIN;
+            bool write = events[i].events & EPOLLOUT;
 
-        assert(!read || iou_poll_in(data->reactor, fd, timespec_zero));
-        assert(!write || iou_poll_out(data->reactor, fd, timespec_zero));
+            // assert(!read || iou_poll_in(data->reactor, fd, timespec_zero));
+            // assert(!write || iou_poll_out(data->reactor, fd, timespec_zero));
 
-        ares_process_fd(data->channel
-        , read ? fd : ARES_SOCKET_BAD
-        , write ? fd : ARES_SOCKET_BAD
-        );
-    }
+            ares_process_fd(data->channel
+            , read ? fd : ARES_SOCKET_BAD
+            , write ? fd : ARES_SOCKET_BAD
+            );
+        }
 
     return nfds > 0;
 }
