@@ -87,11 +87,10 @@ reactor_put(reactor_t * reactor) {
 
 static struct jump_chain_s * const pivoting = (struct jump_chain_s *)~(uintptr_t)0;
 
-reactor_t *
-reactor_synchronize(reactor_t * reactor) {
+void
+reactor__reactor_synchronize(reactor_t * reactor) {
     assert(!reactor->pivot);
     reactor->pivot = pivoting;
-    return reactor;
 }
 
 void *
