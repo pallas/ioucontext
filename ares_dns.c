@@ -122,6 +122,8 @@ iou_ares_arecvfrom(ares_socket_t sock,
 {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
 
+    flags |= MSG_DONTWAIT;
+
     assert(!address || address_len);
     assert(iou_poll_in(iou_ares_data->reactor, sock, timespec_zero));
     return address
@@ -184,6 +186,7 @@ iou_ares_aif_indextoname(unsigned int ifindex,
 
 static const struct ares_socket_functions_ex iou_ares_socket_functions_ex = {
     .version = 1,
+    .flags = ARES_SOCKFUNC_FLAG_NONBLOCKING,
     .asocket = iou_ares_asocket,
     .aclose = iou_ares_aclose,
     .asetsockopt = iou_ares_asetsockopt,
