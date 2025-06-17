@@ -45,6 +45,8 @@ iou_ares_flush_pending_writes(iou_ares_data_t * iou_ares_data) {
 static ares_socket_t
 iou_ares_asocket(int domain, int type, int protocol, void *user_data) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
+    type |= SOCK_NONBLOCK;
+    type |= SOCK_CLOEXEC;
     int fd = ERRNO(iou_socket, iou_ares_data->reactor, domain, type, protocol);
     if (fd < 0)
         return ARES_SOCKET_BAD;
