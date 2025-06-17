@@ -206,6 +206,16 @@ iou_fdatasync(reactor_t * reactor, int fd) {
 }
 
 int
+iou_fdatasync_range(reactor_t * reactor, int fd, off_t start, off_t length) {
+    assert(reactor);
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_fsync(sqe, fd, IORING_FSYNC_DATASYNC);
+    sqe->off = start;
+    sqe->len = length;
+    return reactor_promise(reactor, sqe);
+}
+
+int
 iou_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t size) {
     VALGRIND_CHECK_STRING(name);
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(value, size);
@@ -239,6 +249,16 @@ iou_fsetxattr(reactor_t * reactor, int fd, const char *name, const void *value, 
 int
 iou_fsync(reactor_t * reactor, int fd) {
     return IOU(reactor, fsync, fd, 0);
+}
+
+int
+iou_fsync_range(reactor_t * reactor, int fd, off_t start, off_t length) {
+    assert(reactor);
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_fsync(sqe, fd, 0);
+    sqe->off = start;
+    sqe->len = length;
+    return reactor_promise(reactor, sqe);
 }
 
 int
