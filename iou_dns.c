@@ -71,10 +71,11 @@ main(int argc, const char *argv[]) {
 
     iou_ares_data_t iou_ares_data;
     struct ares_options options = {
-        .flags = ARES_FLAG_STAYOPEN,
+        .flags = ARES_FLAG_STAYOPEN | ARES_FLAG_EDNS | ARES_FLAG_DNS0x20,
     };
     ares_channel_t * channel = iou_ares_get(reactor, &iou_ares_data, &options, 0
     | ARES_OPT_FLAGS
+    | ARES_OPT_ROTATE
     );
 
     reactor_fiber(resolve_all, reactor, &iou_ares_data, argc, argv);
