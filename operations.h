@@ -84,6 +84,7 @@ int iou_rename_noreplace(reactor_t *, const char *oldpath, const char *newpath);
 int iou_renameat(reactor_t *, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
 int iou_rmdir(reactor_t * reactor, const char *pathname);
 int iou_rmdirat(reactor_t *, int dirfd, const char *pathname);
+int iou_scanf(reactor_t *, int fd, const char *format, ...) __attribute__ ((format (scanf, 3, 4)));
 
 typedef uintptr_t iou_semaphore_t;
 iou_semaphore_t iou_semaphore_get(reactor_t *, uint64_t value);
@@ -120,6 +121,7 @@ ssize_t iou_tee(reactor_t *, int fd_in, int fd_out, size_t len);
 int iou_unlink(reactor_t *, const char *pathname);
 int iou_unlinkat(reactor_t *, int dirfd, const char *pathname);
 int iou_vprintf(reactor_t *, int fd, const char *format, va_list args);
+int iou_vscanf(reactor_t *, int fd, const char *format, va_list args);
 int iou_waitid(reactor_t *, idtype_t idtype, id_t id, siginfo_t *infop, int options);
 pid_t iou_waitpid(reactor_t *, pid_t pid, int *wstatus, int options);
 ssize_t iou_write(reactor_t *, int fildes, const void *buf, size_t nbyte);

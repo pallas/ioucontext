@@ -530,6 +530,16 @@ iou_rmdirat(reactor_t * reactor, int dirfd, const char *pathname) {
     return IOU(reactor, unlinkat, dirfd, pathname, AT_REMOVEDIR);
 }
 
+int
+iou_scanf(reactor_t * reactor, int fd, const char *format, ...) {
+    int result;
+    va_list args;
+    va_start(args, format);
+    result = iou_vscanf(reactor, fd, format, args);
+    va_end(args);
+    return result;
+}
+
 iou_semaphore_t
 iou_semaphore_get(reactor_t * reactor, uint64_t value) {
     return (iou_semaphore_t)eventfd(value, EFD_CLOEXEC | EFD_SEMAPHORE);
@@ -899,20 +909,27 @@ iou_unlinkat(reactor_t * reactor, int dirfd, const char *pathname) {
     return IOU(reactor, unlinkat, dirfd, pathname, 0);
 }
 
-typedef struct _iou_vprintf_cookie_s {
+typedef struct _iou_cookie_s {
     reactor_t * reactor;
     int fd;
-} _iou_vprintf_cookie_t;
+} _iou_cookie_t;
 
 static
-ssize_t _iou_vprintf_write(void *_cookie, const char *buf, size_t size) {
-    _iou_vprintf_cookie_t *cookie = (_iou_vprintf_cookie_t*)_cookie;
+ssize_t _iou_cookie_read(void *_cookie, char *buf, size_t size) {
+    _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
+    return ERRNO(iou_read, cookie->reactor, cookie->fd, buf, size);
+}
+
+static
+ssize_t _iou_cookie_write(void *_cookie, const char *buf, size_t size) {
+    _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
     int n = iou_write(cookie->reactor, cookie->fd, buf, size);
     return n < 0 ? 0 : n;
 }
 
-static const cookie_io_functions_t _iou_vprintf_cookie_io_functions = {
-    .write = _iou_vprintf_write,
+static const cookie_io_functions_t _iou_cookie_io_functions = {
+    .read = _iou_cookie_read,
+    .write = _iou_cookie_write,
 };
 
 int
@@ -926,17 +943,37 @@ iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
     int result = vsnprintf(buffer, sizeof buffer, format, args);
 
     if (result >= sizeof buffer) {
-        _iou_vprintf_cookie_t cookie = {
+        _iou_cookie_t cookie = {
             .reactor = reactor,
             .fd = fd,
         };
-        FILE *file = fopencookie(&cookie, "w", _iou_vprintf_cookie_io_functions);
+        FILE *file = fopencookie(&cookie, "w", _iou_cookie_io_functions);
         result = vfprintf(file, format, copy);
         fflush(file);
         fclose(file);
     } else if (result > 0) {
         result = iou_write(reactor, fd, buffer, result);
     }
+
+    va_end(copy);
+    return result;
+}
+
+int
+iou_vscanf(reactor_t * reactor, int fd, const char *format, va_list args) {
+    assert(reactor);
+
+    va_list copy;
+    va_copy(copy, args);
+
+    _iou_cookie_t cookie = {
+        .reactor = reactor,
+        .fd = fd,
+    };
+    FILE *file = fopencookie(&cookie, "r", _iou_cookie_io_functions);
+    TRY(setvbuf, file, NULL, _IONBF, 0);
+    int result = vfscanf(file, format, copy);
+    fclose(file);
 
     va_end(copy);
     return result;
