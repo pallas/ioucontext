@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +16,7 @@ reactor_t * reactor_get();
 void reactor_run(reactor_t *);
 bool reactor_runnable(const reactor_t *);
 bool reactor_running(const reactor_t *);
+uintptr_t reactor_current(const reactor_t *);
 
 void reactor__reactor_synchronize(reactor_t *);
 static inline reactor_t * reactor_synchronize(reactor_t * reactor) {

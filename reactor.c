@@ -342,6 +342,7 @@ reactor_sqe(reactor_t * reactor) {
 bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
 unsigned reactor_inflight(const reactor_t * reactor) { return reactor->sqes - reactor->cqes; }
 bool reactor_runnable(const reactor_t * reactor) { return reactor_inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos); }
+uintptr_t reactor_current(const reactor_t * reactor) { return (uintptr_t)reactor->current ?: (uintptr_t)reactor; }
 
 typedef struct reactor_stack_cache_s {
     stack_t stack;
