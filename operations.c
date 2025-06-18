@@ -1033,15 +1033,8 @@ iou_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
 
 void
 iou_yield(reactor_t * reactor) {
-    assert(reactor);
-
-    if (!io_uring_cq_ready(&reactor->ring)) {
-        TRY(io_uring_submit_and_get_events, &reactor->ring);
-        if (!io_uring_cq_ready(&reactor->ring))
-            return;
-    }
-
-    IOU(reactor, nop);
+    if (reactor->pivot || reactor_runnable(reactor))
+        IOU(reactor, nop);
 }
 
 //
