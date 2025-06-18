@@ -15,7 +15,7 @@ extern "C" {
 #define __VA_NUM_ARGS__(...) ({ \
     _Pragma("GCC diagnostic push") \
     _Pragma("GCC diagnostic ignored \"-Wint-conversion\"") \
-    ((sizeof((const void*[]){ NULL, ##__VA_ARGS__ })/sizeof(void*))-1); \
+    ((sizeof((const volatile void*[]){ NULL, ##__VA_ARGS__ })/sizeof(void*))-1); \
     _Pragma("GCC diagnostic pop") \
 })
 
