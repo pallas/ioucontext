@@ -26,6 +26,14 @@
     reactor_promise(_reactor, sqe); \
 })
 
+#define IOU_FAKE(reactor, operation, ...) do { \
+    reactor_t * _reactor = (reactor); \
+    assert(_reactor); \
+    struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
+    io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
+    reactor_future_fake(_reactor, sqe); \
+} while (false);
+
 #define IOU_DELTA(reactor, delta, operation, ...) ({ \
     reactor_t * _reactor = (reactor); \
     assert(_reactor); \
@@ -88,20 +96,12 @@ iou_bind(reactor_t * reactor, int sockfd, const struct sockaddr *addr, socklen_t
 
 void
 iou_cancel_fd_all(reactor_t * reactor, int fd) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_cancel_fd(sqe, fd, IORING_ASYNC_CANCEL_ALL);
-    reactor_future_fake(reactor, sqe);
+    IOU_FAKE(reactor, cancel_fd, fd, IORING_ASYNC_CANCEL_ALL);
 }
 
 void
 iou_cancel_fd_any(reactor_t * reactor, int fd) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_cancel_fd(sqe, fd, 0);
-    reactor_future_fake(reactor, sqe);
+    IOU_FAKE(reactor, cancel_fd, fd, 0);
 }
 
 int
@@ -111,11 +111,7 @@ iou_close(reactor_t * reactor, int fd) {
 
 void
 iou_close_fast(reactor_t * reactor, int fd) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_close(sqe, fd);
-    reactor_future_fake(reactor, sqe);
+    IOU_FAKE(reactor, close, fd);
 }
 
 int
