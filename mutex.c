@@ -19,7 +19,7 @@ iou_mutex_knock(reactor_t * reactor, iou_mutex_t * mutex) {
     return atomic_compare_exchange_weak_explicit(
         &mutex->value, &shadow, 1,
         memory_order_acquire, memory_order_relaxed
-        ) && 0 == shadow;
+        );
 }
 
 void
