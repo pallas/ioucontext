@@ -26,6 +26,23 @@
 #define VALGRIND_MAKE_MEM_UNDEFINED(a,l) do { } while(false)
 #define VALGRIND_CHECK_STRING(s) do { } while(false)
 #define VALGRIND_MAKE_BUFFER_DEFINED(a,l,r) do { } while(false)
+#endif
+
+#ifdef HAVE_HELGRIND_H
+#include <valgrind/helgrind.h>
+#else
+#define VALGRIND_HG_DISABLE_CHECKING(a,l) do { } while (false)
+#define VALGRIND_HG_MUTEX_INIT_POST(m,r) do { } while (false)
+#define VALGRIND_HG_MUTEX_LOCK_PRE(m,t) do { } while (false)
+#define VALGRIND_HG_MUTEX_LOCK_POST(m) do { } while (false)
+#define VALGRIND_HG_MUTEX_UNLOCK_PRE(m) do { } while (false)
+#define VALGRIND_HG_MUTEX_UNLOCK_POST(m) do { } while (false)
+#define VALGRIND_HG_SEM_INIT_POST(s,v) do { } while (false)
+#define VALGRIND_HG_SEM_WAIT_POST(s) do { } while (false)
+#define VALGRIND_HG_SEM_POST_PRE(s) do { } while (false)
+#endif
+
+#ifndef RUNNING_ON_VALGRIND
 #define RUNNING_ON_VALGRIND (false)
 #endif
 

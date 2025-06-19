@@ -73,6 +73,10 @@ check_include_file(valgrind/memcheck.h HAVE_MEMCHECK_H)
 if (HAVE_MEMCHECK_H)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MEMCHECK_H)
 endif()
+check_include_file(valgrind/helgrind.h HAVE_HELGRIND_H)
+if (HAVE_HELGRIND_H)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_HELGRIND_H)
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
