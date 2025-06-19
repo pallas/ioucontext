@@ -33,6 +33,7 @@ void iou_mootex_build(reactor_t *, iou_mootex_t *);
 bool iou_mootex_knock(reactor_t *, iou_mootex_t *);
 void iou_mootex_enter(reactor_t *, iou_mootex_t *);
 bool iou_mootex_taken(reactor_t *, const iou_mootex_t *);
+bool iou_mootex_owner(reactor_t *, const iou_mootex_t *);
 void iou_mootex_leave(reactor_t *, iou_mootex_t *);
 
 #ifdef __cplusplus

@@ -94,6 +94,12 @@ iou_mootex_taken(reactor_t * reactor, const iou_mootex_t * mootex) {
     return iou_mutex_taken(reactor, &mootex->mutex);
 }
 
+bool
+iou_mootex_owner(reactor_t * reactor, const iou_mootex_t * mootex) {
+    uintptr_t whoami = reactor_current(reactor);
+    return whoami == atomic_load_explicit(&mootex->owner, memory_order_relaxed);
+}
+
 void
 iou_mootex_leave(reactor_t * reactor, iou_mootex_t * mootex) {
     uintptr_t whoami = reactor_current(reactor);
