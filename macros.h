@@ -73,7 +73,7 @@ extern "C" {
 #define VALGRIND_CHECK_MEM_IS_DEFINED(a,l) do { } while(false)
 #define VALGRIND_CHECK_VALUE_IS_DEFINED(v) do { } while(false)
 #define VALGRIND_MAKE_MEM_DEFINED(a,l) do { } while(false)
-#define VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE do { } while(false)
+#define VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(a,l) do { } while(false)
 #define VALGRIND_MAKE_MEM_UNDEFINED(a,l) do { } while(false)
 #define VALGRIND_CHECK_STRING(s) do { } while(false)
 #define VALGRIND_MAKE_BUFFER_DEFINED(a,l,r) do { } while(false)
