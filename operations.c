@@ -4,6 +4,7 @@
 #include "operations.h"
 
 #include "macros.h"
+#include "macros-internal.h"
 #include "reactor-internal.h"
 #include "stack.h"
 

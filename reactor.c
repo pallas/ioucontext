@@ -3,6 +3,7 @@
 #include "reactor-internal.h"
 
 #include "macros.h"
+#include "macros-internal.h"
 #include "stack.h"
 #include "todo_sigjmp.h"
 

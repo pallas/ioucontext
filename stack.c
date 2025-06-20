@@ -2,6 +2,7 @@
 #include "stack.h"
 
 #include "macros.h"
+#include "macros-internal.h"
 
 #include <alloca.h>
 #include <assert.h>

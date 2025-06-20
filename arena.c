@@ -2,7 +2,7 @@
 #define _GNU_SOURCE
 #include "arena.h"
 
-#include "macros.h"
+#include "macros-internal.h"
 
 #include <assert.h>
 #include <stdint.h>
