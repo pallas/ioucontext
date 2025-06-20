@@ -95,7 +95,7 @@ iou_mootex_build(reactor_t * reactor, iou_mootex_t * mootex) {
 bool
 iou_mootex_knock(reactor_t * reactor, iou_mootex_t * mootex) {
     VALGRIND_HG_MUTEX_LOCK_PRE(mootex, 1);
-    uintptr_t whoami = reactor_current(reactor);
+    const uintptr_t whoami = reactor_current(reactor);
     if (whoami == atomic_load_explicit(&mootex->owner, memory_order_relaxed)) {
         ++mootex->depth;
         VALGRIND_HG_MUTEX_LOCK_POST(mootex);
@@ -117,7 +117,7 @@ iou_mootex_knock(reactor_t * reactor, iou_mootex_t * mootex) {
 void
 iou_mootex_enter(reactor_t * reactor, iou_mootex_t * mootex) {
     VALGRIND_HG_MUTEX_LOCK_PRE(mootex, 0);
-    uintptr_t whoami = reactor_current(reactor);
+    const uintptr_t whoami = reactor_current(reactor);
     if (whoami == atomic_load_explicit(&mootex->owner, memory_order_relaxed)) {
         ++mootex->depth;
     } else {
@@ -137,14 +137,14 @@ iou_mootex_taken(reactor_t * reactor, const iou_mootex_t * mootex) {
 
 bool
 iou_mootex_owner(reactor_t * reactor, const iou_mootex_t * mootex) {
-    uintptr_t whoami = reactor_current(reactor);
+    const uintptr_t whoami = reactor_current(reactor);
     return whoami == atomic_load_explicit(&mootex->owner, memory_order_relaxed);
 }
 
 void
 iou_mootex_leave(reactor_t * reactor, iou_mootex_t * mootex) {
     VALGRIND_HG_MUTEX_UNLOCK_PRE(mootex);
-    uintptr_t whoami = reactor_current(reactor);
+    const uintptr_t whoami = reactor_current(reactor);
     if (UNLIKELY(whoami != atomic_load_explicit(&mootex->owner, memory_order_relaxed)))
         abort();
     if (!--mootex->depth) {
