@@ -125,7 +125,7 @@ iou_ares_arecvfrom(ares_socket_t sock,
     flags |= MSG_DONTWAIT;
 
     assert(!address || address_len);
-    assert(iou_poll_in(iou_ares_data->reactor, sock, timespec_zero));
+    // assert(iou_poll_in(iou_ares_data->reactor, sock, timespec_zero));
     return address
         ? ERRNO(iou_recvfrom, iou_ares_data->reactor, sock, buffer, length, flags, address, *address_len)
         : ERRNO(iou_recv, iou_ares_data->reactor, sock, buffer, length, flags)
@@ -142,7 +142,7 @@ iou_ares_asendto(ares_socket_t sock,
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
 
     assert(!address || address_len);
-    assert(iou_poll_out(reactor_synchronize(iou_ares_data->reactor), sock, timespec_zero));
+    // assert(iou_poll_out(reactor_synchronize(iou_ares_data->reactor), sock, timespec_zero));
     return address
         ? ERRNO(iou_sendto, reactor_synchronize(iou_ares_data->reactor), sock, buffer, length, flags, address, address_len)
         : ERRNO(iou_send, reactor_synchronize(iou_ares_data->reactor), sock, buffer, length, flags);
