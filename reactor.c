@@ -134,7 +134,8 @@ reactor_flush(reactor_t * reactor) {
     struct io_uring_cqe * cqe;
     io_uring_for_each_cqe(&reactor->ring, head, cqe) {
         ++reactor->cqes;
-        if (jump_chain_t * todo = (jump_chain_t*)io_uring_cqe_get_data(cqe)) {
+        jump_chain_t * todo;
+        if (todo = (jump_chain_t*)io_uring_cqe_get_data(cqe)) {
             if (!(cqe->flags & IORING_CQE_F_NOTIF) || cqe->res < 0)
                 todo->result = cqe->res;
 
