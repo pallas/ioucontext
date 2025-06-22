@@ -6,7 +6,8 @@
 #include <valgrind/memcheck.h>
 #include <string.h>
 #define VALGRIND_CHECK_STRING(s) do { \
-    if (const typeof (s) _s = s) \
+    const typeof (s) _s = s; \
+    if (_s) \
         VALGRIND_CHECK_MEM_IS_DEFINED(_s, strlen(_s)); \
 } while (false)
 #define VALGRIND_MAKE_BUFFER_DEFINED(a,l,r) do { \
