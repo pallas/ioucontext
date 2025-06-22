@@ -49,6 +49,13 @@ extern "C" {
 #define LIKELY(e) __builtin_expect(!!(e), true)
 #define UNLIKELY(e) __builtin_expect(!!(e), false)
 
+#define ADD_OVERFLOW_P(l, r) ({ \
+    const typeof (l) _l = l; \
+    const typeof (r) _r = r; \
+    const static typeof (_l + _r) _z = 0; \
+    __builtin_add_overflow_p(_l, _r, _z); \
+})
+
 #ifdef __cplusplus
 }
 #endif
