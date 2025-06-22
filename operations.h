@@ -22,6 +22,7 @@ struct statx;
 struct timespec;
 
 typedef struct reactor_s reactor_t;
+typedef struct _IO_FILE FILE;
 
 int iou_accept(reactor_t *, int fd, struct sockaddr *addr, socklen_t *addrlen);
 void iou_barrier(reactor_t *);
@@ -45,6 +46,7 @@ int iou_fallocate(reactor_t *, int fd, int mode, off_t offset, off_t len);
 ssize_t iou_fd_size(reactor_t *, int fd);
 int iou_fdatasync(reactor_t *, int fd);
 int iou_fdatasync_range(reactor_t *, int fd, off_t start, off_t length);
+FILE *iou_fdopen(reactor_t *, int fd, const char *mode);
 int iou_fgetxattr(reactor_t *, int fd, const char *name, void *value, size_t size);
 void iou_flush(reactor_t *);
 int iou_fsetxattr(reactor_t *, int fd, const char *name, const void *value, size_t size, int flags);
