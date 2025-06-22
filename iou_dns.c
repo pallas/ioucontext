@@ -4,6 +4,8 @@
 
 #include <ares.h>
 #include <netdb.h>
+#include <stdio.h>
+#include <string.h>
 
 void
 forward_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
@@ -58,13 +60,10 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
 
     iou_semaphore_post(reactor, semaphore);
 }
-
 void
-resolve_all(reactor_t * reactor, iou_ares_data_t * iou_ares_data, int argc, const char *argv[], iou_semaphore_t * semaphore) {
-    for (int i = 1 ; i < argc ; ++i) {
-        iou_semaphore_wait(reactor, semaphore);
-        reactor_fiber(resolve_dns, reactor, iou_ares_data, (char*)argv[i], semaphore);
-    }
+resolve_dns_free(reactor_t * reactor, iou_ares_data_t * iou_ares_data, char * name, iou_semaphore_t * semaphore) {
+    resolve_dns(reactor, iou_ares_data, name, semaphore);
+    free(name);
 }
 
 int
@@ -85,7 +84,30 @@ main(int argc, const char *argv[]) {
     iou_semaphore_t semaphore;
     iou_semaphore_init(reactor, &semaphore, 64);
 
-    reactor_fiber(resolve_all, reactor, &iou_ares_data, argc, argv, &semaphore);
+    if (argc <= 1) {
+        FILE * f = iou_fdopen(reactor, STDIN_FILENO, "r");
+        if (!f)
+            abort();
+
+        ssize_t length = 0;
+        char *buffer = NULL;
+        while (-1 != (length = getdelim(&buffer, &length, '\n', f))) {
+            char *token;
+            char *cursor = buffer;
+            while (token = strsep(&cursor, " \t\n")) {
+                if (token = strdup(token)) {
+                    iou_semaphore_wait(reactor, &semaphore);
+                    reactor_fiber(resolve_dns_free, reactor, &iou_ares_data, token, &semaphore);
+                }
+            }
+        }
+
+        fclose(f);
+        free(buffer);
+    } else for (int i = 1 ; i < argc ; ++i) {
+        iou_semaphore_wait(reactor, &semaphore);
+        reactor_fiber(resolve_dns, reactor, &iou_ares_data, argv[i], &semaphore);
+    }
 
     reactor_run(reactor);
 
