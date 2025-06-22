@@ -12,9 +12,9 @@ extern "C" {
 
 typedef struct reactor_s reactor_t;
 
-typedef _Atomic uint32_t iou_mutex_value_t;
+typedef uint32_t iou_mutex_value_t;
 typedef struct iou_mutex_s {
-    iou_mutex_value_t value;
+    _Atomic iou_mutex_value_t value;
 } iou_mutex_t;
 
 void iou_mutex_build(reactor_t *, iou_mutex_t *);
