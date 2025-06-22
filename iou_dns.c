@@ -47,7 +47,7 @@ reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * a
 }
 
 void
-resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
+resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name, iou_semaphore_t * semaphore) {
     struct sockaddr_storage sockaddr;
     socklen_t socklen = sockaddr_parse(&sockaddr, name, 0);
 
@@ -55,12 +55,18 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
         reverse_dns(reactor, iou_ares_data, name, &sockaddr, socklen);
     else
         forward_dns(reactor, iou_ares_data, name);
+
+    iou_semaphore_post(reactor, semaphore);
 }
 
 void
 resolve_all(reactor_t * reactor, iou_ares_data_t * iou_ares_data, int argc, const char *argv[]) {
-    for (int i = 1 ; i < argc ; ++i)
-        reactor_fiber(resolve_dns, reactor, iou_ares_data, (char*)argv[i]);
+    iou_semaphore_t semaphore;
+    iou_semaphore_init(reactor, &semaphore, 64);
+    for (int i = 1 ; i < argc ; ++i) {
+        iou_semaphore_wait(reactor, &semaphore);
+        reactor_fiber(resolve_dns, reactor, iou_ares_data, (char*)argv[i], &semaphore);
+    }
 }
 
 int
