@@ -85,13 +85,6 @@ int iou_renameat(reactor_t *, int olddirfd, const char *oldpath, int newdirfd, c
 int iou_rmdir(reactor_t * reactor, const char *pathname);
 int iou_rmdirat(reactor_t *, int dirfd, const char *pathname);
 int iou_scanf(reactor_t *, int fd, const char *format, ...) __attribute__ ((format (scanf, 3, 4)));
-
-typedef uintptr_t iou_semaphore_t;
-iou_semaphore_t iou_semaphore_get(reactor_t *, uint64_t value);
-int iou_semaphore_wait(reactor_t *, iou_semaphore_t, const struct timespec delta);
-void iou_semaphore_post(reactor_t *, iou_semaphore_t);
-void iou_semaphore_put(reactor_t *, iou_semaphore_t);
-
 ssize_t iou_send(reactor_t *, int socket, const void *buffer, size_t length, int flags);
 ssize_t iou_sendto(reactor_t *, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
 int iou_setsockopt(reactor_t *, int socket, int level, int option_name, const void *option_value, socklen_t option_len);

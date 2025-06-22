@@ -10,6 +10,7 @@
 #include "operations.h"
 #include "reactor.h"
 #include "rustls_tls.h"
+#include "semaphore.h"
 #include "sockaddr.h"
 #include "timespec.h"
 

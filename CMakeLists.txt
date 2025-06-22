@@ -26,6 +26,7 @@ set(${PROJECT_NAME}_OBJECTS
 	operations
 	reactor
 	rustls_tls
+	semaphore
 	sockaddr
 	stack
 	timespec
@@ -45,6 +46,7 @@ set(${PROJECT_NAME}_HEADERS
 	operations
 	reactor
 	rustls_tls
+	semaphore
 	sockaddr
 	timespec
         )
