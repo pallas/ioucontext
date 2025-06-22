@@ -60,12 +60,10 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
 }
 
 void
-resolve_all(reactor_t * reactor, iou_ares_data_t * iou_ares_data, int argc, const char *argv[]) {
-    iou_semaphore_t semaphore;
-    iou_semaphore_init(reactor, &semaphore, 64);
+resolve_all(reactor_t * reactor, iou_ares_data_t * iou_ares_data, int argc, const char *argv[], iou_semaphore_t * semaphore) {
     for (int i = 1 ; i < argc ; ++i) {
-        iou_semaphore_wait(reactor, &semaphore);
-        reactor_fiber(resolve_dns, reactor, iou_ares_data, (char*)argv[i], &semaphore);
+        iou_semaphore_wait(reactor, semaphore);
+        reactor_fiber(resolve_dns, reactor, iou_ares_data, (char*)argv[i], semaphore);
     }
 }
 
@@ -84,7 +82,10 @@ main(int argc, const char *argv[]) {
     | ARES_OPT_ROTATE
     );
 
-    reactor_fiber(resolve_all, reactor, &iou_ares_data, argc, argv);
+    iou_semaphore_t semaphore;
+    iou_semaphore_init(reactor, &semaphore, 64);
+
+    reactor_fiber(resolve_all, reactor, &iou_ares_data, argc, argv, &semaphore);
 
     reactor_run(reactor);
 
