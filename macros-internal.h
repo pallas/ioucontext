@@ -50,4 +50,27 @@
 #define RUNNING_ON_VALGRIND (false)
 #endif
 
+#define LIKELY(e) __builtin_expect(!!(e), true)
+#define UNLIKELY(e) __builtin_expect(!!(e), false)
+
+#define ADD_OVERFLOW_P(l, r) ({ \
+    const typeof (l) _l = l; \
+    const typeof (r) _r = r; \
+    const static typeof (_l + _r) _z = 0; \
+    __builtin_add_overflow_p(_l, _r, _z); \
+})
+
+#include <stddef.h>
+
+#define TYPEOF_MEMBER(type, member) typeof(&((type *)NULL)->member)
+
+#define CONTAINER_OF(pointer, type, member) ({ \
+    typeof (pointer) _pointer = (pointer); \
+    static const ptrdiff_t offset = offsetof(type, member); \
+    _Generic(_pointer \
+    , TYPEOF_MEMBER(const type, member) : (const type *)(((const char *)_pointer)-offset) \
+    , TYPEOF_MEMBER(type, member) : (type *)(((char *)_pointer)-offset) \
+    ); \
+})
+
 #endif//IOUCONTEXT_MACROS_INTERNAL_H

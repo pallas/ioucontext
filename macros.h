@@ -4,8 +4,6 @@
 
 #include <errno.h>
 #include <error.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -45,27 +43,6 @@ extern "C" {
 #define ERRNO(f, ...) ({ \
     typeof (f (__VA_ARGS__)) _result = f(__VA_ARGS__); \
     _result < 0 ? ( errno = -_result), -1 : _result; \
-})
-
-#define LIKELY(e) __builtin_expect(!!(e), true)
-#define UNLIKELY(e) __builtin_expect(!!(e), false)
-
-#define ADD_OVERFLOW_P(l, r) ({ \
-    const typeof (l) _l = l; \
-    const typeof (r) _r = r; \
-    const static typeof (_l + _r) _z = 0; \
-    __builtin_add_overflow_p(_l, _r, _z); \
-})
-
-#define TYPEOF_MEMBER(type, member) typeof(&((type *)NULL)->member)
-
-#define CONTAINER_OF(pointer, type, member) ({ \
-    typeof (pointer) _pointer = (pointer); \
-    static const ptrdiff_t offset = offsetof(type, member); \
-    _Generic(_pointer \
-    , TYPEOF_MEMBER(const type, member) : (const type *)(((const char *)_pointer)-offset) \
-    , TYPEOF_MEMBER(type, member) : (type *)(((char *)_pointer)-offset) \
-    ); \
 })
 
 #ifdef __cplusplus
