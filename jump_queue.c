@@ -9,10 +9,10 @@ void fiber_switch(fiber_t *);
 
 void
 jump_invoke(jump_chain_t * jc) {
-    assert(jc->fun);
-    if (jc->fib)
-        fiber_switch(jc->fib);
-    jc->fun(jc->arg);
+    assert(jc->function);
+    if (jc->fiber)
+        fiber_switch(jc->fiber);
+    jc->function(jc);
 }
 
 jump_result_t
@@ -40,7 +40,7 @@ jump_queue_chain(jump_queue_t * hither, jump_queue_t * hence) {
 
 void
 jump_queue_enqueue(jump_queue_t * jq, jump_chain_t * jc) {
-    assert(jc->fun);
+    assert(jc->function);
     assert(!jc->next);
 
     if (jump_queue_empty(jq)) {
@@ -62,13 +62,13 @@ jump_queue_dequeue(jump_queue_t * jq) {
     jq->head = jc->next;
     jc->next = NULL;
 
-    assert(jc->fun);
+    assert(jc->function);
     return jc;
 }
 
 void
 jump_queue_requeue(jump_queue_t * jq, jump_chain_t * jc) {
-    assert(jc->fun);
+    assert(jc->function);
     assert(!jc->next);
 
     if (jump_queue_empty(jq)) {
@@ -81,6 +81,5 @@ jump_queue_requeue(jump_queue_t * jq, jump_chain_t * jc) {
 
     assert(!jump_queue_empty(jq));
 }
-
 
 //
