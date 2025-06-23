@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "timespec.h"
 
-#include "macros.h"
+#include "macros-internal.h"
 
 #include <assert.h>
 #include <time.h>

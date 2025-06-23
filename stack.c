@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "stack.h"
 
-#include "macros.h"
 #include "macros-internal.h"
 
 #include <alloca.h>

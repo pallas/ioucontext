@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "mutex.h"
 
-#include "macros.h"
 #include "macros-internal.h"
 #include "operations.h"
 #include "reactor.h"

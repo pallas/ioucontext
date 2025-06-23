@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "todo_ucontext.h"
 
-#include "macros.h"
+#include "macros-internal.h"
 
 #include <assert.h>
 #include <string.h>

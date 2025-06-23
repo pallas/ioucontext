@@ -2,6 +2,8 @@
 #ifndef IOUCONTEXT_MACROS_INTERNAL_H
 #define IOUCONTEXT_MACROS_INTERNAL_H
 
+#include "macros.h"
+
 #ifdef HAVE_MEMCHECK_H
 #include <valgrind/memcheck.h>
 #include <string.h>
