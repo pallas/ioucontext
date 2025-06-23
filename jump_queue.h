@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+typedef struct reactor_s reactor_t;
 typedef struct fiber_s fiber_t;
 typedef struct jump_chain_s jump_chain_t;
 typedef jump_chain_t * jump_argument;
@@ -21,7 +22,7 @@ typedef struct jump_chain_s {
     jump_result_t result;
 } jump_chain_t;
 
-void jump_invoke(jump_chain_t *);
+void jump_invoke(jump_chain_t *, reactor_t *);
 jump_result_t jump_result(const jump_chain_t *);
 
 typedef struct jump_queue_s {

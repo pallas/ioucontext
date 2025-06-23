@@ -62,9 +62,4 @@ fiber_get(reactor_t *reactor) {
     return main_context;
 }
 
-void
-fiber_switch(fiber_t *f) {
-    f->reactor->current = f;
-}
-
 //

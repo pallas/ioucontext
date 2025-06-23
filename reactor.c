@@ -166,7 +166,7 @@ reactor_cqes(reactor_t * reactor) {
     unsigned delta = reactor_flush(reactor);
 
     if (!jump_queue_empty(&reactor->todos))
-        jump_invoke(jump_queue_dequeue(&reactor->todos));
+        jump_invoke(jump_queue_dequeue(&reactor->todos), reactor);
 
     return delta;
 }
@@ -181,7 +181,7 @@ reactor_enter_core(reactor_t * reactor) {
         }
 
         while (!jump_queue_empty(&reactor->todos) && io_uring_sq_space_left(&reactor->ring))
-            jump_invoke(jump_queue_dequeue(&reactor->todos));
+            jump_invoke(jump_queue_dequeue(&reactor->todos), reactor);
 
         if (reactor_inflight(reactor))
             reactor_cqes(reactor);

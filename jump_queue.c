@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 #include "jump_queue.h"
 
+#include "reactor-internal.h"
+
 #include <assert.h>
 #include <stddef.h>
 
-typedef struct fiber_s fiber_t;
-void fiber_switch(fiber_t *);
-
 void
-jump_invoke(jump_chain_t * jc) {
+jump_invoke(jump_chain_t * jc, reactor_t * reactor) {
     assert(jc->function);
-    if (jc->fiber)
-        fiber_switch(jc->fiber);
+    reactor->current = jc->fiber;
     jc->function(jc);
 }
 
