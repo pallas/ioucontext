@@ -38,7 +38,6 @@ int reactor_promise_nonchalant(reactor_t *, struct io_uring_sqe *);
 int reactor_promise_impatient(reactor_t *, struct io_uring_sqe *, struct timespec);
 void reactor_future_fake(reactor_t *, struct io_uring_sqe *);
 
-void reactor_schedule(reactor_t *, jump_chain_t *);
 struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
 void reactor_reserve_sqes(reactor_t *, size_t);
 unsigned reactor_inflight(const reactor_t *);

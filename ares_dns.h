@@ -27,11 +27,11 @@ ares_channel_t * iou_ares_get(reactor_t *, iou_ares_data_t * data, const struct 
 void iou_ares_cancel(iou_ares_data_t * data);
 void iou_ares_put(iou_ares_data_t * data);
 
-typedef struct todo_sigjmp_s todo_sigjmp_t;
+typedef struct jump_chain_s jump_chain_t;
 
 typedef struct iou_ares_future_s {
     iou_ares_data_t * data;
-    todo_sigjmp_t * todo;
+    jump_chain_t * jump;
 } iou_ares_future_t;
 
 int iou_ares__wait(iou_ares_future_t * result, ...);

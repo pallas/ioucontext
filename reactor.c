@@ -266,6 +266,15 @@ reactor_future_fake(reactor_t * reactor, struct io_uring_sqe * sqe) {
 }
 
 void
+reactor_park(reactor_t * reactor, jump_chain_t ** jump) {
+    todo_sigjmp_t todo;
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
+        *jump = &todo.jump;
+        reactor_enter_core(reactor);
+    }
+}
+
+void
 reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     assert(reactor);
     assert(todo->function);
@@ -279,7 +288,6 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
         jump_queue_enqueue(&reactor->todos, todo);
     }
 }
-
 
 static void
 reactor_defer(reactor_t * reactor) {

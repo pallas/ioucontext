@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "ares_dns.h"
 
-#include "reactor-internal.h"
+#include "reactor.h"
 #include "fiber.h"
 #include "macros-internal.h"
 #include "operations.h"
-#include "todo_sigjmp.h"
+#include "timespec.h"
 
 #include <ares.h>
 #include <assert.h>
@@ -234,9 +234,9 @@ iou_ares_put(iou_ares_data_t * data) {
 
 static void
 iou_ares_future_fulfill(iou_ares_future_t * future) {
-    if (future->todo) {
-        reactor_schedule(future->data->reactor, &future->todo->jump);
-        future->todo = NULL;
+    if (future->jump) {
+        reactor_schedule(future->data->reactor, future->jump);
+        future->jump = NULL;
     }
     assert(future->data);
     future->data = NULL;
@@ -415,11 +415,7 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
             else
                 --data->waiters;
         } else {
-            todo_sigjmp_t todo;
-            future->todo = &todo;
-            if (!sigsetjmp(*make_todo_sigjmp(&todo, data->reactor->current), false))
-                reactor_enter_core(data->reactor);
-
+            reactor_park(data->reactor, &future->jump);
             --data->waiters;
             assert(!future->data);
             future = va_arg(list, iou_ares_future_t *);
