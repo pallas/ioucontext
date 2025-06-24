@@ -162,8 +162,8 @@ iou_rustls_log_callback(void *userdata, const struct rustls_log_params *params) 
     reactor_t * reactor = (reactor_t *)userdata;
     struct rustls_str level_str = rustls_log_level_str(params->level);
     iou_printf(reactor, STDERR_FILENO, "%.*s: %.*s\n"
-    , level_str.len, level_str.data
-    , params->message.len, params->message.data
+    , (int)level_str.len, level_str.data
+    , (int)params->message.len, params->message.data
     );
 }
 
