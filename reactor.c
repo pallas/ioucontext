@@ -187,8 +187,10 @@ reactor_enter_core(reactor_t * reactor) {
             reactor_cqes(reactor);
     }
 
-    if (reactor->runner)
+    if (reactor->runner) {
+        reactor->current = NULL;
         siglongjmp(*reactor->runner, true);
+    }
 }
 
 int
@@ -378,6 +380,7 @@ void
 reactor_run(reactor_t * reactor) {
     assert(reactor);
     assert(!reactor_running(reactor));
+    assert(!reactor->current);
 
     if (reactor_runnable(reactor)) {
         sigjmp_buf runner;
@@ -388,6 +391,9 @@ reactor_run(reactor_t * reactor) {
 
         reactor->runner = NULL;
     }
+
+    assert(!reactor_running(reactor));
+    assert(!reactor->current);
 }
 
 //
