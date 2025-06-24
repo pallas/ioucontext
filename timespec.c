@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <time.h>
 
+static const long msec_per_sec = 1000;
+static const long nsec_per_msec = 1000000;
 static const long nsec_per_sec = 1000000000;
 
 struct timespec
@@ -35,6 +37,10 @@ normalize_timespec(const struct timespec ts) {
 
     return normal;
 }
+
+struct timespec timespec_s(long s) { return normalize_timespec((const struct timespec){ .tv_sec = s }); }
+struct timespec timespec_ms(long ms) { return normalize_timespec((const struct timespec){ .tv_sec = ms / msec_per_sec, .tv_nsec = (ms % msec_per_sec) * nsec_per_msec }); }
+struct timespec timespec_ns(long ns) { return normalize_timespec((const struct timespec){ .tv_nsec = ns }); }
 
 struct timespec
 timespec_from_double(double d) {
