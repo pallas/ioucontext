@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 struct epoll_event;
+struct flock;
 struct iovec;
 struct siginfo_t;
 struct sockaddr;
@@ -43,7 +44,13 @@ int iou_exchangeat(reactor_t *, int dirfd, const char *oldpath, const char *newp
 bool iou_exists(reactor_t *, const char *pathname);
 int iou_fadvise(reactor_t *, int fd, off_t offset, off_t len, int advice);
 int iou_fallocate(reactor_t *, int fd, int mode, off_t offset, off_t len);
+int iou_fd_getlock(reactor_t *, int fd, struct flock *);
+int iou_fd_lock_append(reactor_t *, int fd, off_t length, const struct timespec delta);
+int iou_fd_lock_read(reactor_t *, int fd, off_t start, off_t length, const struct timespec delta);
+int iou_fd_lock_write(reactor_t *, int fd, off_t start, off_t length, const struct timespec delta);
+int iou_fd_setlock(reactor_t *, int fd, const struct flock *, const struct timespec delta);
 ssize_t iou_fd_size(reactor_t *, int fd);
+int iou_fd_unlock(reactor_t *, int fd, off_t start, off_t length);
 int iou_fdatasync(reactor_t *, int fd);
 int iou_fdatasync_range(reactor_t *, int fd, off_t start, off_t length);
 FILE *iou_fdopen(reactor_t *, int fd, const char *mode);

@@ -186,6 +186,79 @@ iou_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
     return IOU(reactor, fallocate, fd, mode, offset, len);
 }
 
+int
+iou_fd_getlock(reactor_t * reactor, int fd, struct flock *lock) {
+    VALGRIND_CHECK_MEM_IS_DEFINED(lock, sizeof *lock);
+    return fcntl(fd, F_OFD_GETLK, lock) ? -errno : 0;
+}
+
+int
+iou_fd_lock_append(reactor_t * reactor, int fd, off_t length, const struct timespec delta) {
+    struct flock lock = {
+        .l_type = F_WRLCK,
+        .l_whence = SEEK_END,
+        .l_start = 0,
+        .l_len = length,
+    };
+    return iou_fd_setlock(reactor, fd, &lock, delta);
+}
+
+int
+iou_fd_lock_read(reactor_t * reactor, int fd, off_t start, off_t length, const struct timespec delta) {
+    struct flock lock = {
+        .l_type = F_RDLCK,
+        .l_whence = start < 0 ? SEEK_END: SEEK_SET,
+        .l_start = start,
+        .l_len = length,
+    };
+    return iou_fd_setlock(reactor, fd, &lock, delta);
+}
+
+int
+iou_fd_lock_write(reactor_t * reactor, int fd, off_t start, off_t length, const struct timespec delta) {
+    struct flock lock = {
+        .l_type = F_WRLCK,
+        .l_whence = start < 0 ? SEEK_END : SEEK_SET,
+        .l_start = start,
+        .l_len = length,
+    };
+    return iou_fd_setlock(reactor, fd, &lock, delta);
+}
+
+int
+iou_fd_setlock(reactor_t * reactor, int fd, const struct flock *lock, const struct timespec delta) {
+    assert(reactor);
+
+    VALGRIND_CHECK_MEM_IS_DEFINED(lock, sizeof *lock);
+
+    switch (timespec_when(normalize_timespec(delta))) {
+    case -1: {
+        int result = fcntl(fd, F_OFD_SETLK, lock);
+        while (result && (errno == EACCES || errno == EAGAIN || errno == EINTR))
+            result = iou_yield(reactor) ? fcntl(fd, F_OFD_SETLK, lock) : fcntl(fd, F_OFD_SETLKW, lock);
+        return result ? -errno : 0;
+        } break;
+
+    case 0: {
+        return fcntl(fd, F_OFD_SETLK, lock) ? -errno : 0;
+        } break;
+
+    case 1: {
+        struct timespec when = reify_timespec(delta);
+        int result = fcntl(fd, F_OFD_SETLK, lock);
+        while (result && (errno == EACCES || errno == EAGAIN || errno == EINTR) && timespec_future(dereify_timespec(when))) {
+            iou_yield(reactor);
+            result = fcntl(fd, F_OFD_SETLK, lock);
+        }
+        return result ? -errno : 0;
+        } break;
+
+    default: abort();
+    }
+
+    return 0;
+}
+
 ssize_t
 iou_fd_size(reactor_t * reactor, int fd) {
     struct statx buf;
@@ -195,6 +268,17 @@ iou_fd_size(reactor_t * reactor, int fd) {
         return result;
 
     return buf.stx_size;
+}
+
+int
+iou_fd_unlock(reactor_t * reactor, int fd, off_t start, off_t length) {
+    struct flock lock = {
+        .l_type = F_UNLCK,
+        .l_whence = start < 0 ? SEEK_END : SEEK_SET,
+        .l_start = start,
+        .l_len = length,
+    };
+    return iou_fd_setlock(reactor, fd, &lock, timespec_block);
 }
 
 int
