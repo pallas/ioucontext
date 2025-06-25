@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-#include "ares_dns.h"
+#include "iou-cares.h"
 
 #include "reactor.h"
 #include "fiber.h"

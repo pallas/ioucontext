@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 
 #include <ioucontext/ioucontext.h>
+#include <ioucontext/iou-rustls.h>
 
 #include <assert.h>
 #include <fcntl.h>

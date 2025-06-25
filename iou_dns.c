@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #define _GNU_SOURCE
-#include "ioucontext.h"
+
+#include <ioucontext/ioucontext.h>
+#include <ioucontext/iou-cares.h>
 
 #include <ares.h>
 #include <netdb.h>

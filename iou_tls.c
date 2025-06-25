@@ -2,6 +2,8 @@
 #define _GNU_SOURCE
 
 #include <ioucontext/ioucontext.h>
+#include <ioucontext/iou-cares.h>
+#include <ioucontext/iou-rustls.h>
 
 #include <ares.h>
 #include <assert.h>

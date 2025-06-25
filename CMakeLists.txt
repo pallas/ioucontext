@@ -19,13 +19,11 @@ project(ioucontext)
 # objects become the library
 set(${PROJECT_NAME}_OBJECTS
 	arena
-	ares_dns
 	fiber
 	jump_queue
 	mutex
 	operations
 	reactor
-	rustls_tls
 	semaphore
 	sockaddr
 	stack
@@ -38,14 +36,12 @@ set(${PROJECT_NAME}_OBJECTS
 # headers are installed
 set(${PROJECT_NAME}_HEADERS
 	arena
-	ares_dns
 	fiber
 	ioucontext
 	macros
 	mutex
 	operations
 	reactor
-	rustls_tls
 	semaphore
 	sockaddr
 	timespec
@@ -54,11 +50,8 @@ set(${PROJECT_NAME}_HEADERS
 # executables link the shared library and are installed
 set(${PROJECT_NAME}_EXECUTABLES
 	iou_cat
-	iou_dns
 	iou_port7
 	iou_timers
-	iou_tls
-	iou_tlsd
         )
 
 # tests link the static library and are not installed
@@ -103,12 +96,42 @@ if (LIBUCONTEXT)
 endif()
 
 find_library(LIBCARES cares)
-target_link_libraries(${PROJECT_NAME}-static ${LIBCARES})
-target_link_libraries(${PROJECT_NAME}-shared ${LIBCARES})
+if (LIBCARES)
+	add_library(${PROJECT_NAME}-cares SHARED)
+	target_sources(${PROJECT_NAME}-cares PUBLIC iou-cares.c)
+	set_target_properties(${PROJECT_NAME}-cares PROPERTIES OUTPUT_NAME ${PROJECT_NAME}-cares SOVERSION 0 VERSION 0.0.0)
+	target_link_libraries(${PROJECT_NAME}-cares ${PROJECT_NAME}-shared ${LIBCARES})
+	install(FILES iou-cares.h DESTINATION "include/${PROJECT_NAME}/")
+	install(TARGETS ${PROJECT_NAME}-cares LIBRARY DESTINATION lib)
+	foreach(executable iou_dns)
+		add_executable(${executable} ${executable}.c)
+		target_link_libraries(${executable} ${PROJECT_NAME}-cares ${PROJECT_NAME}-shared)
+		install(TARGETS ${executable} RUNTIME DESTINATION bin)
+	endforeach(executable)
+endif()
 
 find_library(LIBRUSTLS rustls)
-target_link_libraries(${PROJECT_NAME}-static ${LIBRUSTLS})
-target_link_libraries(${PROJECT_NAME}-shared ${LIBRUSTLS})
+if (LIBRUSTLS)
+	add_library(${PROJECT_NAME}-rustls SHARED)
+	target_sources(${PROJECT_NAME}-rustls PUBLIC iou-rustls.c)
+	set_target_properties(${PROJECT_NAME}-rustls PROPERTIES OUTPUT_NAME ${PROJECT_NAME}-rustls SOVERSION 0 VERSION 0.0.0)
+	target_link_libraries(${PROJECT_NAME}-rustls ${PROJECT_NAME}-shared ${LIBRUSTLS})
+	install(FILES iou-rustls.h DESTINATION "include/${PROJECT_NAME}/")
+	install(TARGETS ${PROJECT_NAME}-rustls LIBRARY DESTINATION lib)
+	foreach(executable iou_tlsd)
+		add_executable(${executable} ${executable}.c)
+		target_link_libraries(${executable} ${PROJECT_NAME}-rustls ${PROJECT_NAME}-shared)
+		install(TARGETS ${executable} RUNTIME DESTINATION bin)
+	endforeach(executable)
+endif()
+
+if (LIBCARES AND LIBRUSTLS)
+	foreach(executable iou_tls)
+		add_executable(${executable} ${executable}.c)
+		target_link_libraries(${executable} ${PROJECT_NAME}-cares ${PROJECT_NAME}-rustls ${PROJECT_NAME}-shared)
+		install(TARGETS ${executable} RUNTIME DESTINATION bin)
+	endforeach(executable)
+endif()
 
 install(TARGETS
         ${PROJECT_NAME}-static
