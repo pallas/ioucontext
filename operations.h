@@ -120,7 +120,7 @@ int iou_vscanf(reactor_t *, int fd, const char *format, va_list args);
 int iou_waitid(reactor_t *, idtype_t idtype, id_t id, siginfo_t *infop, int options);
 pid_t iou_waitpid(reactor_t *, pid_t pid, int *wstatus, int options);
 ssize_t iou_write(reactor_t *, int fildes, const void *buf, size_t nbyte);
-void iou_yield(reactor_t *);
+bool iou_yield(reactor_t *);
 
 #ifdef __cplusplus
 }
