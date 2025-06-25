@@ -40,7 +40,7 @@
     assert(_reactor); \
     const struct timespec _delta = delta; \
     int result; \
-    switch (timespec_when(normalize_timespec(delta))) { \
+    switch (timespec_when(normalize_timespec(_delta))) { \
     case -1: { \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
@@ -53,7 +53,7 @@
         result = reactor_promise_nonchalant(_reactor, sqe); \
         } break; \
     case 1: { \
-        struct timespec when = reify_timespec(delta); \
+        struct timespec when = reify_timespec(_delta); \
         reactor_reserve_sqes(reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
