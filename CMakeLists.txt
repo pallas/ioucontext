@@ -97,7 +97,7 @@ target_link_libraries(${PROJECT_NAME}-static ${LIBURING})
 target_link_libraries(${PROJECT_NAME}-shared ${LIBURING})
 
 find_library(LIBUCONTEXT ucontext)
-if (${LIBUCONTEXT})
+if (LIBUCONTEXT)
 	target_link_libraries(${PROJECT_NAME}-static ${LIBUCONTEXT})
 	target_link_libraries(${PROJECT_NAME}-shared ${LIBUCONTEXT})
 endif()
