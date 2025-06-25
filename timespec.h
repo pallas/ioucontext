@@ -14,6 +14,7 @@ static const struct timespec timespec_block = { .tv_sec = -1, };
 static const struct timespec timespec_zero = { .tv_sec = 0, .tv_nsec = 0, };
 
 struct timespec reify_timespec(const struct timespec);
+struct timespec dereify_timespec(const struct timespec);
 struct timespec normalize_timespec(const struct timespec);
 struct timespec timespec_s(long);
 struct timespec timespec_ms(long);

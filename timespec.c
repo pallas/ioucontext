@@ -22,6 +22,17 @@ reify_timespec(const struct timespec delta) {
 }
 
 struct timespec
+dereify_timespec(const struct timespec when) {
+    struct timespec now;
+    TRY(clock_gettime, CLOCK_BOOTTIME, &now);
+
+    return normalize_timespec((struct timespec){
+        when.tv_sec - now.tv_sec,
+        when.tv_nsec - now.tv_nsec,
+    });
+}
+
+struct timespec
 normalize_timespec(const struct timespec ts) {
     struct timespec normal = ts;
 
