@@ -426,6 +426,17 @@ iou_futex_wake32_bitset_fast(reactor_t * reactor, uint32_t *futex, uint32_t mask
     IOU_FAKE(reactor, futex_wake, futex, n, mask, 0 | FUTEX_32, 0);
 }
 
+ssize_t
+iou_getrandom(reactor_t * reactor, char *buf, size_t buflen) {
+    if (reactor->urandomfd < 0)
+        reactor->urandomfd = iou_open(reactor, "/dev/urandom", O_RDONLY, 0);
+
+    if (reactor->urandomfd < 0)
+        return reactor->urandomfd;
+
+    return iou_read(reactor, reactor->urandomfd, buf, buflen);
+}
+
 int
 iou_getsockopt(reactor_t * reactor, int socket, int level, int option_name, void *option_value, socklen_t *option_len) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(option_value, *option_len);

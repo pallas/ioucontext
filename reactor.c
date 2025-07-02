@@ -54,6 +54,7 @@ reactor_set(reactor_t * reactor) {
     reactor->sqes = reactor->cqes = reactor->reserved = 0;
     reactor->current = NULL;
     reactor->pivot = NULL;
+    reactor->urandomfd = -1;
 }
 
 reactor_t *
@@ -76,6 +77,8 @@ static void
 reactor_put(reactor_t * reactor) {
     assert(!reactor_running(reactor));
     assert(!reactor->current);
+    if (reactor->urandomfd >= 0)
+        close(reactor->urandomfd);
     if (reactor->cookie_eat)
         reactor->cookie_eat(reactor->cookie);
     io_uring_unregister_ring_fd(&reactor->ring);

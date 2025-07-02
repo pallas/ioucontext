@@ -66,6 +66,7 @@ int iou_futex_wake32(reactor_t *, uint32_t *futex, int n);
 void iou_futex_wake32_fast(reactor_t *, uint32_t *futex, int n);
 int iou_futex_wake32_bitset(reactor_t *, uint32_t *futex, uint32_t mask, int n);
 void iou_futex_wake32_bitset_fast(reactor_t *, uint32_t *futex, uint32_t mask, int n);
+ssize_t iou_getrandom(reactor_t *, char *buf, size_t buflen);
 int iou_getsockopt(reactor_t *, int socket, int level, int option_name, void *option_value, socklen_t *option_len);
 int iou_getsockopt_int(reactor_t *, int socket, int level, int option_name);
 int iou_getxattr(reactor_t *, const char *path, const char *name, void *value, size_t size);
