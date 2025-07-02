@@ -42,9 +42,7 @@ iou_mutex__enter(reactor_t * reactor, iou_mutex_t * mutex) {
     if (iou_mutex__knock(reactor, mutex))
         return;
 
-    iou_yield(reactor);
-
-    if (iou_mutex__knock(reactor, mutex))
+    if (iou_yield(reactor) && iou_mutex__knock(reactor, mutex))
         return;
 
     while (0 != atomic_exchange_explicit(&mutex->value, -1, memory_order_acquire)) do {
