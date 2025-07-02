@@ -10,28 +10,27 @@
 #include <ucontext.h>
 
 typedef struct fiber_s {
-    reactor_t * reactor;
     stack_t full_stack;
     ucontext_t bounce;
     todo_ucontext_t todo;
 } fiber_t;
 
 static void
-fiber_put(fiber_t *f) {
-    f->reactor->current = NULL;
-    reactor_t * reactor = f->reactor;
-    reactor_stack_put(f->reactor, f->full_stack);
+fiber_put(fiber_t *fiber, reactor_t *reactor) {
+    reactor->current = NULL;
+    reactor_stack_put(reactor, fiber->full_stack);
     reactor_enter_core(reactor);
     abort();
 }
 
 static void
-fiber_bounce(fiber_t *f) {
-    assert(!f->todo.jump.next);
-    f->bounce.uc_stack = f->reactor->stack;
-    f->bounce.uc_link = NULL;
-    makecontext(&f->bounce, (void(*)())fiber_put, 1, f);
-    setcontext(&f->bounce);
+fiber_bounce(fiber_t *fiber) {
+    assert(!fiber->todo.jump.next);
+    reactor_t * reactor = reactor_get();
+    fiber->bounce.uc_stack = reactor->stack;
+    fiber->bounce.uc_link = NULL;
+    makecontext(&fiber->bounce, (void(*)())fiber_put, 2, fiber, reactor);
+    setcontext(&fiber->bounce);
 }
 
 ucontext_t *
@@ -44,7 +43,6 @@ fiber_get(reactor_t *reactor) {
 
     fiber_t * fiber = stack_push(&main_stack, fiber_t);
 
-    fiber->reactor = reactor;
     fiber->full_stack = full_stack;
 
     explicit_bzero(&fiber->bounce, sizeof fiber->bounce);
