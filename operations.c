@@ -161,6 +161,15 @@ iou_epoll_set(reactor_t * reactor, int epfd, int fd, struct epoll_event *event) 
 }
 
 int
+iou_epoll_wait(reactor_t * reactor, int epfd, struct epoll_event *events, int maxevents, const struct timespec delta) {
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(events, maxevents * sizeof *events);
+    int result = IOU_DELTA(reactor, delta, epoll_wait, epfd, events, maxevents, 0);
+    if (result > 0)
+        VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(events, result * sizeof *events);
+    return result;
+}
+
+int
 iou_exchange(reactor_t * reactor, const char *oldpath, const char *newpath) {
     return iou_exchangeat(reactor, AT_FDCWD, oldpath, newpath);
 }

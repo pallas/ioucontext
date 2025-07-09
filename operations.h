@@ -39,6 +39,7 @@ int iou_epoll_ctl(reactor_t *, int epfd, int op, int fd, struct epoll_event *eve
 int iou_epoll_del(reactor_t *, int epfd, int fd);
 int iou_epoll_mod(reactor_t *, int epfd, int fd, struct epoll_event *event);
 int iou_epoll_set(reactor_t *, int epfd, int fd, struct epoll_event *event);
+int iou_epoll_wait(reactor_t *, int epfd, struct epoll_event *events, int maxevents, const struct timespec delta);
 int iou_exchange(reactor_t *, const char *oldpath, const char *newpath);
 int iou_exchangeat(reactor_t *, int dirfd, const char *oldpath, const char *newpath);
 bool iou_exists(reactor_t *, const char *pathname);
