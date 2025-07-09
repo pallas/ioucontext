@@ -125,7 +125,6 @@ iou_ares_arecvfrom(ares_socket_t sock,
     flags |= MSG_DONTWAIT;
 
     assert(!address || address_len);
-    // assert(iou_poll_in(iou_ares_data->reactor, sock, timespec_zero));
     return address
         ? ERRNO(iou_recvfrom, iou_ares_data->reactor, sock, buffer, length, flags, address, *address_len)
         : ERRNO(iou_recv, iou_ares_data->reactor, sock, buffer, length, flags)
@@ -142,7 +141,6 @@ iou_ares_asendto(ares_socket_t sock,
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)user_data;
 
     assert(!address || address_len);
-    // assert(iou_poll_out(reactor_synchronize(iou_ares_data->reactor), sock, timespec_zero));
     return address
         ? ERRNO(iou_sendto, reactor_synchronize(iou_ares_data->reactor), sock, buffer, length, flags, address, address_len)
         : ERRNO(iou_send, reactor_synchronize(iou_ares_data->reactor), sock, buffer, length, flags);
@@ -352,33 +350,27 @@ iou_ares_resolve_any(iou_ares_data_t * data) {
     if (!ares_timeout(data->channel, NULL, &timeout))
         return false;
 
-    if (!iou_poll_in(data->reactor, data->epfd, timeval_to_timespec(timeout))) {
-        ares_process_fd(data->channel, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
+    struct epoll_event events[32];
+    int nfds = iou_epoll_wait(data->reactor, data->epfd, events, sizeof(events)/sizeof(*events), timeval_to_timespec(timeout));
+
+    if (nfds <= 0) {
+        ares_process_fds(data->channel, NULL, 0, 0);
         return true;
     }
 
-    struct epoll_event events[32];
-    int nfds;
-    do { } while ((nfds = epoll_wait(data->epfd, events, sizeof(events)/sizeof(*events), 0)) < 0 && errno == EINTR);
+    ares_fd_events_t fds[nfds];
+    for (int i = 0 ; i < nfds ; ++i) {
+        ares_fd_eventflag_t eventflag = ARES_FD_EVENT_NONE;
+        if (events[i].events & EPOLLIN) eventflag |= ARES_FD_EVENT_READ;
+        if (events[i].events & EPOLLOUT) eventflag |= ARES_FD_EVENT_WRITE;
+        fds[i] = (ares_fd_events_t){
+            .fd = events[i].data.fd,
+            .events = eventflag,
+        };
+    }
 
-    if (nfds == 0)
-        iou_yield(data->reactor);
-    else if (nfds > 0)
-        for (int i = 0 ; i < nfds ; ++i) {
-            int fd = events[i].data.fd;
-            bool read = events[i].events & EPOLLIN;
-            bool write = events[i].events & EPOLLOUT;
-
-            // assert(!read || iou_poll_in(data->reactor, fd, timespec_zero));
-            // assert(!write || iou_poll_out(data->reactor, fd, timespec_zero));
-
-            ares_process_fd(data->channel
-            , read ? fd : ARES_SOCKET_BAD
-            , write ? fd : ARES_SOCKET_BAD
-            );
-        }
-
-    return nfds > 0;
+    ares_process_fds(data->channel, fds, nfds, 0);
+    return true;
 }
 
 static void
