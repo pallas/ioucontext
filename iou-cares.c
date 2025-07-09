@@ -227,7 +227,7 @@ iou_ares_put(iou_ares_data_t * data) {
     ares_destroy(data->channel);
     assert(0 == data->waiters);
     assert(0 == data->pending_writes);
-    close(data->epfd);
+    iou_close_fast(data->reactor, data->epfd);
 }
 
 static void
