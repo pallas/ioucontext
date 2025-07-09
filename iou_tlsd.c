@@ -145,7 +145,7 @@ mmap_file(reactor_t * reactor, const char *pathname, size_t *size) {
     if (ssize >= 0)
         data = mmap(NULL, (*size = ssize), PROT_READ, MAP_PRIVATE, fd, 0);
 
-    close(fd);
+    iou_close_fast(reactor, fd);
 
     return MAP_FAILED != data ? data : NULL;
 }
