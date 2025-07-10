@@ -7,6 +7,8 @@
 #include <stdarg.h>
 #include <sys/socket.h>
 
+#include <ioucontext/mutex.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,6 +23,7 @@ typedef struct iou_ares_data_s {
     int epfd;
     unsigned waiters;
     unsigned pending_writes;
+    iou_mutex_t mutex;
 } iou_ares_data_t;
 
 ares_channel_t * iou_ares_get(reactor_t *, iou_ares_data_t * data, const struct ares_options * options, int optmask);
