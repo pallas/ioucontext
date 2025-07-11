@@ -18,9 +18,10 @@ forward_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
     iou_ares_addrinfo(iou_ares_data, name, NULL, &hints, &result);
     iou_ares_wait(&result.future);
 
-    if (ARES_SUCCESS != result.status)
+    if (ARES_SUCCESS != result.status) {
+        iou_printf(reactor, STDERR_FILENO, "%s: %s\n", name, ares_strerror(result.status));
         return;
-
+    }
 
     for_ares_addrinfo_cnames(cname, *result.addrinfo)
         iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", cname->alias, cname->name);
@@ -42,8 +43,10 @@ reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * a
     iou_ares_nameinfo(iou_ares_data, (struct sockaddr *)sockaddr, socklen, 0, &result);
     iou_ares_wait(&result.future);
 
-    if (ARES_SUCCESS != result.status)
+    if (ARES_SUCCESS != result.status) {
+        iou_printf(reactor, STDERR_FILENO, "%s: %s\n", addr, ares_strerror(result.status));
         return;
+    }
 
     iou_printf(reactor, STDOUT_FILENO, "%s is %s\n", addr, result.node ? result.node : "");
 
