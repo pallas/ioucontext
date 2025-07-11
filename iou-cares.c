@@ -38,14 +38,11 @@ iou_ares_pending_write_cb(void *data) {
 
 static void
 iou_ares_flush_pending_writes(iou_ares_data_t * iou_ares_data) {
-    if (iou_ares_data->pending_writes) {
-        iou_mutex_enter(iou_ares_data->reactor, &iou_ares_data->mutex);
-        do {
-            assert(iou_ares_data->pending_writes == 1);
-            ares_process_pending_write(iou_ares_data->channel);
-        } while (--iou_ares_data->pending_writes);
-        iou_mutex_leave(iou_ares_data->reactor, &iou_ares_data->mutex);
-    }
+    assert(iou_mutex_taken(iou_ares_data->reactor, &iou_ares_data->mutex));
+    if (iou_ares_data->pending_writes) do {
+        assert(iou_ares_data->pending_writes == 1);
+        ares_process_pending_write(iou_ares_data->channel);
+    } while (--iou_ares_data->pending_writes);
 }
 
 static ares_socket_t
@@ -136,7 +133,6 @@ iou_ares_arecvfrom(ares_socket_t sock,
     flags |= MSG_DONTWAIT;
 
     assert(!address || address_len);
-    assert(iou_poll_in(iou_ares_data->reactor, sock, timespec_zero));
     return address
         ? ERRNO(iou_recvfrom, iou_ares_data->reactor, sock, buffer, length, flags, address, *address_len)
         : ERRNO(iou_recv, iou_ares_data->reactor, sock, buffer, length, flags)
@@ -154,7 +150,6 @@ iou_ares_asendto(ares_socket_t sock,
     assert(iou_mutex_taken(iou_ares_data->reactor, &iou_ares_data->mutex));
 
     assert(!address || address_len);
-    assert(iou_poll_out(iou_ares_data->reactor, sock, timespec_zero));
     return address
         ? ERRNO(iou_sendto, iou_ares_data->reactor, sock, buffer, length, flags, address, address_len)
         : ERRNO(iou_send, iou_ares_data->reactor, sock, buffer, length, flags);
@@ -377,61 +372,69 @@ timeval_to_timespec(struct timeval tv) {
     };
 }
 
-static bool
-iou_ares_resolve_any(iou_ares_data_t * data) {
-    iou_ares_flush_pending_writes(data);
+static void
+iou_ares_epoll_to_ares_fds(const struct epoll_event epoll_events[], ares_fd_events_t ares_fd_events[], size_t n_events) {
+    for (size_t i = 0 ; i < n_events ; ++i) {
+        const int fd = epoll_events[i].data.fd;
+        const bool read = epoll_events[i].events & EPOLLIN;
+        const bool write = epoll_events[i].events & EPOLLOUT;
 
-    struct timeval timeout = { };
-    if (!ares_timeout(data->channel, NULL, &timeout))
-        return false;
-
-    struct epoll_event events[32];
-    int nfds = iou_epoll_wait(data->reactor, data->epfd, events, sizeof(events)/sizeof(*events), timeval_to_timespec(timeout));
-
-    if (nfds <= 0) {
-        iou_mutex_enter(data->reactor, &data->mutex);
-        ares_process_fds(data->channel, NULL, 0, 0);
-        iou_mutex_leave(data->reactor, &data->mutex);
-        return true;
-    }
-
-    ares_fd_events_t fds[nfds];
-    for (int i = 0 ; i < nfds ; ++i) {
-        ares_fd_eventflag_t eventflag = ARES_FD_EVENT_NONE;
-        if (events[i].events & EPOLLIN) {
-            assert(iou_poll_in(data->reactor, events[i].data.fd, timespec_zero));
-            eventflag |= ARES_FD_EVENT_READ;
-        }
-        if (events[i].events & EPOLLOUT) {
-            assert(iou_poll_out(data->reactor, events[i].data.fd, timespec_zero));
-            eventflag |= ARES_FD_EVENT_WRITE;
-        }
-        fds[i] = (ares_fd_events_t){
-            .fd = events[i].data.fd,
-            .events = eventflag,
+        ares_fd_events[i] = (ares_fd_events_t){
+            .fd = fd,
+            .events = ARES_FD_EVENT_NONE
+                | (read ? ARES_FD_EVENT_READ : 0)
+                | (write ? ARES_FD_EVENT_WRITE : 0)
         };
     }
+}
+
+static bool
+iou_ares_resolve_any(iou_ares_data_t * data, const void ** canary) {
+    struct timeval timeout = { };
+    if (!ares_timeout(data->channel, NULL, &timeout)) {
+        assert(!data->pending_writes);
+        return false;
+    }
+
+    struct epoll_event events[32];
+    static const size_t n_events = sizeof(events)/sizeof(*events);
+    ares_fd_events_t fds[n_events];
+
+    int nfds = iou_epoll_wait(data->reactor, data->epfd, events, n_events, timeval_to_timespec(timeout));
+    while (n_events == nfds) {
+        iou_ares_epoll_to_ares_fds(events, fds, nfds);
+
+        iou_mutex_enter(data->reactor, &data->mutex);
+        ares_process_fds(data->channel, fds, nfds, ARES_PROCESS_FLAG_SKIP_NON_FD);
+        iou_mutex_leave(data->reactor, &data->mutex);
+
+        nfds = (!canary || *canary) ? iou_epoll_wait(data->reactor, data->epfd, events, n_events, timespec_zero) : 0;
+    }
+
+    if (nfds < 0)
+        nfds = 0;
+
+    iou_ares_epoll_to_ares_fds(events, fds, nfds);
 
     iou_mutex_enter(data->reactor, &data->mutex);
     ares_process_fds(data->channel, fds, nfds, 0);
+    iou_ares_flush_pending_writes(data);
     iou_mutex_leave(data->reactor, &data->mutex);
+
     return true;
 }
 
 static void
 iou_ares_resolve_one(iou_ares_future_t * future) {
-    while (future->data) {
-        if (UNLIKELY(!iou_ares_resolve_any(future->data)))
+    while (future->data)
+        if (UNLIKELY(!iou_ares_resolve_any(future->data, (const void**)&future->data)))
             abort();
-        else if (future->data)
-            iou_yield(future->data->reactor);
-    }
 }
 
 static void
 iou_ares_resolve_all(reactor_t * reactor, iou_ares_data_t * data) {
     assert(reactor == data->reactor);
-    while (iou_ares_resolve_any(data))
+    while (iou_ares_resolve_any(data, NULL))
         iou_yield(reactor);
     --data->waiters;
 }
@@ -447,8 +450,7 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
             future = va_arg(list, iou_ares_future_t *);
         } else if (!data->waiters++) {
             do {
-                if (future->data)
-                    iou_ares_resolve_one(future);
+                iou_ares_resolve_one(future);
                 future = va_arg(list, iou_ares_future_t *);
             } while (future && (!future->data || future->data == data));
 
@@ -456,7 +458,7 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
             if (data->waiters > 1)
                 reactor_fiber(iou_ares_resolve_all, data->reactor, data);
             else
-                --data->waiters;
+                data->waiters = 0;
         } else {
             reactor_park(data->reactor, &future->jump);
             --data->waiters;
