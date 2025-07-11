@@ -100,6 +100,7 @@ main(int argc, const char *argv[]) {
             char *token;
             char *cursor = buffer;
             while (token = strsep(&cursor, " \t\n")) {
+                if (*token)
                 if (token = strdup(token)) {
                     iou_semaphore_wait(reactor, &semaphore);
                     reactor_fiber(resolve_dns_free, reactor, &iou_ares_data, token, &semaphore);
