@@ -761,24 +761,15 @@ struct timespec
 iou_sleep(reactor_t * reactor, const struct timespec delta) {
     assert(reactor);
 
-    struct timespec now;
-    TRY(clock_gettime, CLOCK_BOOTTIME, &now);
-    const struct timespec when = normalize_timespec((struct timespec){
-        .tv_sec = now.tv_sec + delta.tv_sec,
-        .tv_nsec = now.tv_nsec + delta.tv_nsec,
-    });
+    const struct timespec when = reify_timespec(delta);
 
     if (iou_sleep_absolute(reactor, when))
-        return (struct timespec){ .tv_sec = 0, .tv_nsec = 0 };
+        return timespec_zero;
 
-    TRY(clock_gettime, CLOCK_BOOTTIME, &now);
-    const struct timespec remaining = normalize_timespec((struct timespec){
-        .tv_sec = when.tv_sec - now.tv_sec,
-        .tv_nsec = when.tv_nsec - now.tv_nsec,
-    });
+    const struct timespec remaining = dereify_timespec(when);
 
     if (remaining.tv_sec < 0)
-        return (struct timespec){ .tv_sec = 0, .tv_nsec = 0 };
+        return timespec_zero;
 
     return remaining;
 }
