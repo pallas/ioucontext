@@ -3,7 +3,6 @@
 
 #include "macros-internal.h"
 #include "operations.h"
-#include "reactor.h"
 #include "timespec.h"
 
 #include <assert.h>
