@@ -17,7 +17,7 @@ typedef struct iou_semaphore_s {
     _Atomic iou_semaphore_value_t value;
 } iou_semaphore_t;
 
-void iou_semaphore_init(reactor_t *, iou_semaphore_t *, const iou_semaphore_value_t);
+void iou_semaphore(iou_semaphore_t *, const iou_semaphore_value_t);
 void iou_semaphore_wait(reactor_t *, iou_semaphore_t *);
 void iou_semaphore_post(reactor_t *, iou_semaphore_t *);
 

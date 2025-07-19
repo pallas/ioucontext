@@ -8,7 +8,7 @@
 #include <assert.h>
 
 void
-iou_semaphore_init(reactor_t * reactor, iou_semaphore_t * semaphore, const iou_semaphore_value_t value) {
+iou_semaphore(iou_semaphore_t * semaphore, const iou_semaphore_value_t value) {
     atomic_init(&semaphore->value, value);
     VALGRIND_HG_SEM_INIT_POST(&semaphore->value, value);
 }

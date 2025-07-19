@@ -87,7 +87,7 @@ main(int argc, const char *argv[]) {
     );
 
     iou_semaphore_t semaphore;
-    iou_semaphore_init(reactor, &semaphore, 64);
+    iou_semaphore(&semaphore, 64);
 
     if (argc <= 1) {
         FILE * f = iou_fdopen(reactor, STDIN_FILENO, "r");
