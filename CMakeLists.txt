@@ -19,6 +19,7 @@ project(ioucontext)
 # objects become the library
 set(${PROJECT_NAME}_OBJECTS
 	arena
+	eventcount
 	fiber
 	jump_queue
 	mutex
@@ -36,6 +37,7 @@ set(${PROJECT_NAME}_OBJECTS
 # headers are installed
 set(${PROJECT_NAME}_HEADERS
 	arena
+	eventcount
 	fiber
 	ioucontext
 	macros

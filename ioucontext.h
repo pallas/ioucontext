@@ -3,6 +3,7 @@
 #define IOUCONTEXT_H
 
 #include "arena.h"
+#include "eventcount.h"
 #include "fiber.h"
 #include "macros.h"
 #include "mutex.h"
