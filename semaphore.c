@@ -38,7 +38,7 @@ iou_semaphore_post(reactor_t * reactor, iou_semaphore_t * semaphore) {
     do {
         if (UNLIKELY(ADD_OVERFLOW_P(value, n)))
             abort();
-    } while (atomic_compare_exchange_weak_explicit(
+    } while (!atomic_compare_exchange_weak_explicit(
         &semaphore->value, &value, value + n,
         memory_order_release, memory_order_relaxed
         ));
