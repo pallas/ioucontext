@@ -9,13 +9,13 @@
 #include <assert.h>
 
 static void
-iou_mutex__build(reactor_t * reactor, iou_mutex_t * mutex) {
+iou_mutex_(iou_mutex_t * mutex) {
     atomic_init(&mutex->value, 0);
 }
 
 void
-iou_mutex_build(reactor_t * reactor, iou_mutex_t * mutex) {
-    iou_mutex__build(reactor, mutex);
+iou_mutex(iou_mutex_t * mutex) {
+    iou_mutex_(mutex);
     VALGRIND_HG_MUTEX_INIT_POST(mutex, 1);
 }
 
@@ -80,8 +80,8 @@ iou_mutex_leave(reactor_t * reactor, iou_mutex_t * mutex) {
 
 
 void
-iou_mootex_build(reactor_t * reactor, iou_mootex_t * mootex) {
-    iou_mutex__build(reactor, &mootex->mutex);
+iou_mootex(iou_mootex_t * mootex) {
+    iou_mutex_(&mootex->mutex);
     VALGRIND_HG_MUTEX_INIT_POST(mootex, 1);
     VALGRIND_HG_DISABLE_CHECKING(&mootex->owner, sizeof mootex->owner);
     VALGRIND_HG_DISABLE_CHECKING(&mootex->depth, sizeof mootex->depth);

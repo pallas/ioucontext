@@ -222,7 +222,7 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
         .pending_writes = 0,
     };
 
-    iou_mutex_build(reactor, &data->mutex);
+    iou_mutex(&data->mutex);
 
     struct ares_options iou_options = options ? *options : (struct ares_options) { };
 

@@ -17,7 +17,7 @@ typedef struct iou_mutex_s {
     _Atomic iou_mutex_value_t value;
 } iou_mutex_t;
 
-void iou_mutex_build(reactor_t *, iou_mutex_t *);
+void iou_mutex(iou_mutex_t *);
 bool iou_mutex_knock(reactor_t *, iou_mutex_t *);
 void iou_mutex_enter(reactor_t *, iou_mutex_t *);
 bool iou_mutex_taken(reactor_t *, const iou_mutex_t *);
@@ -29,7 +29,7 @@ typedef struct iou_mootex_s {
     unsigned depth;
 } iou_mootex_t;
 
-void iou_mootex_build(reactor_t *, iou_mootex_t *);
+void iou_mootex(iou_mootex_t *);
 bool iou_mootex_knock(reactor_t *, iou_mootex_t *);
 void iou_mootex_enter(reactor_t *, iou_mootex_t *);
 bool iou_mootex_taken(reactor_t *, const iou_mootex_t *);
