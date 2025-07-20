@@ -412,6 +412,12 @@ iou_futex_wait32_bitset(reactor_t * reactor, uint32_t *futex, uint32_t value, ui
 }
 
 int
+iou_futex_waitv(reactor_t * reactor, struct futex_waitv *futexv, uint32_t nr_futex, const struct timespec delta) {
+    VALGRIND_CHECK_MEM_IS_DEFINED(futexv, nr_futex * sizeof *futexv);
+    return IOU_DELTA(reactor, delta, futex_waitv, futexv, nr_futex, 0);
+}
+
+int
 iou_futex_wake32(reactor_t * reactor, uint32_t *futex, int n) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
     return IOU(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);

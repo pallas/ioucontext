@@ -16,6 +16,7 @@ extern "C" {
 
 struct epoll_event;
 struct flock;
+struct futex_waitv;
 struct iovec;
 struct siginfo_t;
 struct sockaddr;
@@ -63,6 +64,7 @@ int iou_fsync_range(reactor_t *, int fd, off_t start, off_t length);
 int iou_ftruncate(reactor_t *, int fildes, off_t length);
 int iou_futex_wait32(reactor_t *, uint32_t *futex, uint32_t value, const struct timespec delta);
 int iou_futex_wait32_bitset(reactor_t *, uint32_t *futex, uint32_t value, uint32_t mask, const struct timespec delta);
+int iou_futex_waitv(reactor_t *, struct futex_waitv *futexv, uint32_t nr_futex, const struct timespec delta);
 int iou_futex_wake32(reactor_t *, uint32_t *futex, int n);
 void iou_futex_wake32_fast(reactor_t *, uint32_t *futex, int n);
 int iou_futex_wake32_bitset(reactor_t *, uint32_t *futex, uint32_t mask, int n);
