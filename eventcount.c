@@ -11,14 +11,14 @@ iou_eventcount(iou_eventcount_t * eventcount) {
 
 iou_eventcount_ticket_t
 iou_eventcount_ticket(reactor_t * reactor, const iou_eventcount_t * eventcount) {
-    return atomic_load_explicit(&eventcount->ticket, memory_order_acquire);
+    return atomic_load_explicit(&eventcount->ticket, memory_order_relaxed);
 }
 
 iou_eventcount_ticket_t
 iou_eventcount_wait(reactor_t * reactor, iou_eventcount_t * eventcount, const iou_eventcount_ticket_t ticket) {
     while (ticket == atomic_load_explicit(&eventcount->ticket, memory_order_relaxed))
         iou_futex_wait32(reactor, (uint32_t*)&eventcount->ticket, ticket, timespec_block);
-    return iou_eventcount_ticket(reactor, eventcount);
+    return atomic_load_explicit(&eventcount->ticket, memory_order_acquire);
 }
 
 void
