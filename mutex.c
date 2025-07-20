@@ -49,10 +49,11 @@ iou_mutex__enter(reactor_t * reactor, iou_mutex_t * mutex) {
     if (iou_yield(reactor) && iou_mutex__knock(reactor, mutex))
         return;
 
-    while (unlocked != atomic_exchange_explicit(&mutex->value, locked_contended, memory_order_acquire)) do {
+    while (unlocked != atomic_exchange_explicit(&mutex->value, locked_contended, memory_order_relaxed)) do {
         iou_futex_wait32(reactor, (uint32_t*)&mutex->value, locked_contended, timespec_block);
     } while (locked_contended == atomic_load_explicit(&mutex->value, memory_order_relaxed));
 
+    atomic_thread_fence(memory_order_acquire);
     assert(iou_mutex_taken(reactor, mutex));
 }
 
