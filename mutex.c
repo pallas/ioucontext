@@ -8,9 +8,13 @@
 
 #include <assert.h>
 
+const static iou_mutex_value_t unlocked = 0;
+const static iou_mutex_value_t locked_uncontended = 1;
+const static iou_mutex_value_t locked_contended = -1;
+
 static void
 iou_mutex_(iou_mutex_t * mutex) {
-    atomic_init(&mutex->value, 0);
+    atomic_init(&mutex->value, unlocked);
 }
 
 void
@@ -21,9 +25,9 @@ iou_mutex(iou_mutex_t * mutex) {
 
 static bool
 iou_mutex__knock(reactor_t * reactor, iou_mutex_t * mutex) {
-    iou_mutex_value_t shadow = 0;
+    iou_mutex_value_t shadow = unlocked;
     return atomic_compare_exchange_weak_explicit(
-        &mutex->value, &shadow, 1,
+        &mutex->value, &shadow, locked_uncontended,
         memory_order_acquire, memory_order_relaxed
         );
 }
@@ -45,9 +49,9 @@ iou_mutex__enter(reactor_t * reactor, iou_mutex_t * mutex) {
     if (iou_yield(reactor) && iou_mutex__knock(reactor, mutex))
         return;
 
-    while (0 != atomic_exchange_explicit(&mutex->value, -1, memory_order_acquire)) do {
-        iou_futex_wait32(reactor, (uint32_t*)&mutex->value, -1, timespec_block);
-    } while (-1 == atomic_load_explicit(&mutex->value, memory_order_relaxed));
+    while (unlocked != atomic_exchange_explicit(&mutex->value, locked_contended, memory_order_acquire)) do {
+        iou_futex_wait32(reactor, (uint32_t*)&mutex->value, locked_contended, timespec_block);
+    } while (locked_contended == atomic_load_explicit(&mutex->value, memory_order_relaxed));
 
     assert(iou_mutex_taken(reactor, mutex));
 }
@@ -61,13 +65,13 @@ iou_mutex_enter(reactor_t * reactor, iou_mutex_t * mutex) {
 
 bool
 iou_mutex_taken(reactor_t * reactor, const iou_mutex_t * mutex) {
-    return 0 != atomic_load_explicit(&mutex->value, memory_order_relaxed);
+    return unlocked != atomic_load_explicit(&mutex->value, memory_order_relaxed);
 }
 
 static void
 iou_mutex__leave(reactor_t * reactor, iou_mutex_t * mutex) {
     assert(iou_mutex_taken(reactor, mutex));
-    if (-1 == atomic_exchange_explicit(&mutex->value, 0, memory_order_release))
+    if (locked_contended == atomic_exchange_explicit(&mutex->value, unlocked, memory_order_release))
         iou_futex_wake32_fast(reactor, (uint32_t*)&mutex->value, 1);
 }
 
