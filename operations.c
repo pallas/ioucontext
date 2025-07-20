@@ -402,37 +402,37 @@ iou_ftruncate(reactor_t * reactor, int fildes, off_t length) {
 int
 iou_futex_wait32(reactor_t * reactor, uint32_t *futex, uint32_t value, const struct timespec delta) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    return IOU_DELTA(reactor, delta, futex_wait, futex, value, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32, 0);
+    return IOU_DELTA(reactor, delta, futex_wait, futex, value, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
 int
 iou_futex_wait32_bitset(reactor_t * reactor, uint32_t *futex, uint32_t value, uint32_t mask, const struct timespec delta) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    return IOU_DELTA(reactor, delta, futex_wait, futex, value, mask, 0 | FUTEX_32, 0);
+    return IOU_DELTA(reactor, delta, futex_wait, futex, value, mask, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
 int
 iou_futex_wake32(reactor_t * reactor, uint32_t *futex, int n) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    return IOU(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32, 0);
+    return IOU(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
 void
 iou_futex_wake32_fast(reactor_t * reactor, uint32_t *futex, int n) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    IOU_FAKE(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32, 0);
+    IOU_FAKE(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
 int
 iou_futex_wake32_bitset(reactor_t * reactor, uint32_t *futex, uint32_t mask, int n) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    return IOU(reactor, futex_wake, futex, n, mask, 0 | FUTEX_32, 0);
+    return IOU(reactor, futex_wake, futex, n, mask, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
 void
 iou_futex_wake32_bitset_fast(reactor_t * reactor, uint32_t *futex, uint32_t mask, int n) {
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    IOU_FAKE(reactor, futex_wake, futex, n, mask, 0 | FUTEX_32, 0);
+    IOU_FAKE(reactor, futex_wake, futex, n, mask, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
 ssize_t
