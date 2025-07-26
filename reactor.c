@@ -126,7 +126,11 @@ reactor_cookie_jar(reactor_t * reactor, void *cookie, reactor_cookie_eat_t eat) 
     return stale;
 }
 
-static void make_reactor_key() { EXPECT(thrd_success, tss_create, &reactor_key, (void(*)())reactor_put); }
+static void
+make_reactor_key() {
+    EXPECT(thrd_success, tss_create, &reactor_key, (void(*)())reactor_put);
+    VALGRIND_HG_DISABLE_CHECKING(&reactor_key, sizeof reactor_key);
+}
 
 static unsigned
 reactor_flush(reactor_t * reactor) {
