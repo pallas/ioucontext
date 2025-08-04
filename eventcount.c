@@ -45,4 +45,9 @@ iou_eventcount_wake_all(reactor_t * reactor, iou_eventcount_t * eventcount) {
     iou_eventcount_wake(reactor, eventcount, INT_MAX);
 }
 
+void
+iou_eventcount_wake_one(reactor_t * reactor, iou_eventcount_t * eventcount) {
+    iou_eventcount_wake(reactor, eventcount, 1);
+}
+
 //

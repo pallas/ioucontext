@@ -22,6 +22,7 @@ iou_eventcount_ticket_t iou_eventcount_ticket(reactor_t *, const iou_eventcount_
 iou_eventcount_ticket_t iou_eventcount_wait(reactor_t *, iou_eventcount_t *, const iou_eventcount_ticket_t);
 void iou_eventcount_wake(reactor_t *, iou_eventcount_t *, int n);
 void iou_eventcount_wake_all(reactor_t *, iou_eventcount_t *);
+void iou_eventcount_wake_one(reactor_t *, iou_eventcount_t *);
 
 typedef struct iou_eventcount__state_s {
     reactor_t * reactor;
