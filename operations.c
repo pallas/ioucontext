@@ -419,14 +419,12 @@ iou_futex_waitv(reactor_t * reactor, struct futex_waitv *futexv, uint32_t nr_fut
 
 int
 iou_futex_wake32(reactor_t * reactor, uint32_t *futex, int n) {
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    return IOU(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
+    return iou_futex_wake32_bitset(reactor, futex, FUTEX_BITSET_MATCH_ANY, n);
 }
 
 void
 iou_futex_wake32_fast(reactor_t * reactor, uint32_t *futex, int n) {
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(futex, sizeof *futex);
-    IOU_FAKE(reactor, futex_wake, futex, n, FUTEX_BITSET_MATCH_ANY, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
+    return iou_futex_wake32_bitset_fast(reactor, futex, FUTEX_BITSET_MATCH_ANY, n);
 }
 
 int
