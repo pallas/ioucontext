@@ -26,7 +26,7 @@ typedef struct reactor_s {
     void *cookie;
     reactor_cookie_eat_t cookie_eat;
     unsigned sqes, cqes;
-    int reserved;
+    unsigned reserved;
     long int queue_depth;
     fiber_t *current;
     struct jump_chain_s *pivot;
