@@ -187,7 +187,7 @@ reactor_enter_core(reactor_t * reactor) {
             reactor_flush(reactor);
         }
 
-        while (!jump_queue_empty(&reactor->todos) && io_uring_sq_space_left(&reactor->ring))
+        while (!jump_queue_empty(&reactor->todos) && !reactor_will_block(reactor, 1))
             jump_invoke(jump_queue_dequeue(&reactor->todos), reactor);
 
         if (reactor_inflight(reactor))
@@ -287,7 +287,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     assert(todo->function);
     assert(!todo->next);
 
-    if (io_uring_sq_space_left(&reactor->ring)) {
+    if (!reactor_will_block(reactor, 1)) {
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_nop(sqe);
         io_uring_sqe_set_data(sqe, (void*)todo);
