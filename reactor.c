@@ -322,7 +322,7 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
         abort();
 
     if (reactor->pivot) {
-        while (io_uring_sq_space_left(&reactor->ring) < n) {
+        while (reactor_will_block(reactor, n)) {
             reactor_flush(reactor);
             TRY(io_uring_sqring_wait, &reactor->ring);
         }
@@ -330,7 +330,7 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
         if (!jump_queue_empty(&reactor->todos) || io_uring_cq_has_overflow(&reactor->ring))
             reactor_defer(reactor);
 
-        while (io_uring_sq_space_left(&reactor->ring) < n) {
+        while (reactor_will_block(reactor, n)) {
             if (io_uring_cq_ready(&reactor->ring))
                 reactor_refer(reactor);
 
@@ -342,7 +342,17 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
     }
 
     assert(io_uring_sq_space_left(&reactor->ring) >= n);
-    reactor->reserved = n;
+    assert(reactor->reserved >= n);
+}
+
+bool
+reactor_will_block(reactor_t * reactor, size_t n) {
+    if (reactor->reserved < n) {
+        unsigned sqes = io_uring_sq_space_left(&reactor->ring);
+        if (reactor->reserved < sqes)
+            reactor->reserved = sqes;
+    }
+    return reactor->reserved < n;
 }
 
 struct io_uring_sqe *
