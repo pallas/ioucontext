@@ -24,9 +24,8 @@ iou_eventcount_wait(reactor_t * reactor, iou_eventcount_t * eventcount, const io
         /* stale ticket */
     } else if ((want | 1) == (have | 1)) do {
         iou_futex_wait32(reactor, (uint32_t*)&eventcount->ticket, want | 1, timespec_block);
-    } while ((want | 1) == atomic_load_explicit(&eventcount->ticket, memory_order_relaxed));
-
-    return atomic_load_explicit(&eventcount->ticket, memory_order_acquire);
+    } while ((want | 1) == (have = atomic_load_explicit(&eventcount->ticket, memory_order_relaxed)));
+    return have;
 }
 
 void
