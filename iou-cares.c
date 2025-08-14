@@ -245,6 +245,7 @@ iou_ares_cancel(iou_ares_data_t * data) {
 void
 iou_ares_put(iou_ares_data_t * data) {
     iou_mutex_enter(data->reactor, &data->mutex);
+    assert(!ares_queue_active_queries(data->channel));
     ares_destroy(data->channel);
     iou_mutex_leave(data->reactor, &data->mutex);
     assert(0 == data->waiters);
@@ -392,9 +393,12 @@ static bool
 iou_ares_resolve_any(iou_ares_data_t * data, const void ** canary) {
     struct timeval timeout = { };
     if (!ares_timeout(data->channel, NULL, &timeout)) {
+        assert(!ares_queue_active_queries(data->channel));
         assert(!data->pending_writes);
         return false;
     }
+
+    assert(ares_queue_active_queries(data->channel));
 
     struct epoll_event events[32];
     static const size_t n_events = sizeof(events)/sizeof(*events);
@@ -434,9 +438,11 @@ iou_ares_resolve_one(iou_ares_future_t * future) {
 static void
 iou_ares_resolve_all(reactor_t * reactor, iou_ares_data_t * data) {
     assert(reactor == data->reactor);
+    assert(ares_queue_active_queries(data->channel));
     while (iou_ares_resolve_any(data, NULL))
         iou_yield(reactor);
     --data->waiters;
+    assert(!ares_queue_active_queries(data->channel));
 }
 
 int
@@ -455,7 +461,7 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
             } while (future && (!future->data || future->data == data));
 
             assert(data->waiters > 0);
-            if (data->waiters > 1)
+            if (data->waiters > 1 || ares_queue_active_queries(data->channel))
                 reactor_fiber(iou_ares_resolve_all, data->reactor, data);
             else
                 data->waiters = 0;
