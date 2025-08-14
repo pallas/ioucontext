@@ -42,7 +42,7 @@ iou_ares_flush_pending_writes(iou_ares_data_t * iou_ares_data) {
     if (iou_ares_data->pending_writes) do {
         assert(iou_ares_data->pending_writes == 1);
         ares_process_pending_write(iou_ares_data->channel);
-    } while (--iou_ares_data->pending_writes);
+    } while (UNLIKELY(--iou_ares_data->pending_writes));
 }
 
 static ares_socket_t
