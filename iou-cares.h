@@ -27,6 +27,7 @@ typedef struct iou_ares_data_s {
 } iou_ares_data_t;
 
 ares_channel_t * iou_ares_get(reactor_t *, iou_ares_data_t * data, const struct ares_options * options, int optmask);
+void iou_ares_reinit(iou_ares_data_t * data);
 void iou_ares_cancel(iou_ares_data_t * data);
 void iou_ares_put(iou_ares_data_t * data);
 

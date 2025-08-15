@@ -236,6 +236,13 @@ iou_ares_get(reactor_t * reactor, iou_ares_data_t * data, const struct ares_opti
 }
 
 void
+iou_ares_reinit(iou_ares_data_t * data) {
+    iou_mutex_enter(data->reactor, &data->mutex);
+    ares_reinit(data->channel);
+    iou_mutex_leave(data->reactor, &data->mutex);
+}
+
+void
 iou_ares_cancel(iou_ares_data_t * data) {
     iou_mutex_enter(data->reactor, &data->mutex);
     ares_cancel(data->channel);
