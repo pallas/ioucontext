@@ -288,7 +288,7 @@ iou_ares_query(iou_ares_data_t * data, const char *name, ares_dns_class_t dnscla
         .future = { .data = data },
     };
     iou_mutex_enter(data->reactor, &data->mutex);
-    result->status = ares_query_dnsrec(data->channel, name, dnsclass, type, iou_ares_dnsrec_callback, result, qid);
+    ares_query_dnsrec(data->channel, name, dnsclass, type, iou_ares_dnsrec_callback, result, qid);
     iou_mutex_leave(data->reactor, &data->mutex);
     return result;
 }
@@ -299,7 +299,7 @@ iou_ares_search(iou_ares_data_t * data, const struct ares_dns_record *dnsrec, io
         .future = { .data = data },
     };
     iou_mutex_enter(data->reactor, &data->mutex);
-    result->status = ares_search_dnsrec(data->channel, dnsrec, iou_ares_dnsrec_callback, result);
+    ares_search_dnsrec(data->channel, dnsrec, iou_ares_dnsrec_callback, result);
     iou_mutex_leave(data->reactor, &data->mutex);
     return result;
 }
