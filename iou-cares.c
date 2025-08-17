@@ -20,7 +20,7 @@ iou_ares_sock_state_cb(void *data, int socket_fd, int readable, int writable) {
     assert(iou_mutex_taken(iou_ares_data->reactor, &iou_ares_data->mutex));
 
     struct epoll_event event = {
-        .events = 0
+        .events = EPOLLRDHUP
             | (readable ? EPOLLIN : 0)
             | (writable ? EPOLLOUT : 0),
         .data.fd = socket_fd,
@@ -55,7 +55,7 @@ iou_ares_asocket(int domain, int type, int protocol, void *user_data) {
     if (fd < 0)
         return ARES_SOCKET_BAD;
 
-    struct epoll_event event = { .data.fd = fd };
+    struct epoll_event event = { .events = EPOLLRDHUP, .data.fd = fd };
     TRY(iou_epoll_add, iou_ares_data->reactor, iou_ares_data->epfd, fd, &event);
 
     return fd;
@@ -377,8 +377,8 @@ static void
 iou_ares_epoll_to_ares_fds(const struct epoll_event epoll_events[], ares_fd_events_t ares_fd_events[], size_t n_events) {
     for (size_t i = 0 ; i < n_events ; ++i) {
         const int fd = epoll_events[i].data.fd;
-        const bool read = epoll_events[i].events & EPOLLIN;
-        const bool write = epoll_events[i].events & EPOLLOUT;
+        const bool read = epoll_events[i].events & (EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLHUP);
+        const bool write = epoll_events[i].events & (EPOLLOUT);
 
         ares_fd_events[i] = (ares_fd_events_t){
             .fd = fd,
