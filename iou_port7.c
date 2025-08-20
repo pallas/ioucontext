@@ -24,6 +24,7 @@ typedef struct fd_s {
 
 typedef struct cookie_s {
     fd_list_t cancelations;
+    bool shutdown;
 } cookie_t;
 
 void
@@ -48,6 +49,7 @@ signal_handler(reactor_t * reactor, sigset_t *mask) {
     iou_close(reactor, sfd);
 
     cookie_t *cookie = (cookie_t*)reactor_cookie(reactor);
+    cookie->shutdown = true;
 
     fd_t *cancelation;
     LIST_FOREACH(cancelation, &cookie->cancelations, entries) {
@@ -83,11 +85,14 @@ udp_service(reactor_t * reactor, const char * name, uint16_t port) {
 
     int fd = TRY(iou_socket, reactor, ss.ss_family, SOCK_DGRAM, 0);
 
+    cookie_t *cookie = (cookie_t*)reactor_cookie(reactor);
+
     fd_t cancelation = { .fd = fd, };
-    LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
+    LIST_INSERT_HEAD(&cookie->cancelations, &cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
     TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEADDR, true);
+    TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEPORT, true);
     TRY(iou_bind, reactor, fd, (struct sockaddr *)&ss, sizeof ss);
 
     while (iou_poll_in(reactor, fd, timespec_block)) {
@@ -100,7 +105,7 @@ udp_service(reactor_t * reactor, const char * name, uint16_t port) {
 
     LIST_REMOVE(&cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "remove %p\n", &cancelation);
-    if (LIST_EMPTY(&((cookie_t*)reactor_cookie(reactor))->cancelations))
+    if (LIST_EMPTY(&cookie->cancelations))
         kill(0, SIGHUP);
 
     TRY(iou_close, reactor, fd);
@@ -118,15 +123,18 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
 
     int fd = TRY(iou_socket, reactor, ss.ss_family, SOCK_STREAM, 0);
 
+    cookie_t *cookie = (cookie_t*)reactor_cookie(reactor);
+
     fd_t cancelation = { .fd = fd, };
-    LIST_INSERT_HEAD(&((cookie_t*)reactor_cookie(reactor))->cancelations, &cancelation, entries);
+    LIST_INSERT_HEAD(&cookie->cancelations, &cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "insert %p\n", &cancelation);
 
     TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEADDR, true);
+    TRY(iou_setsockopt_int, reactor, fd, SOL_SOCKET, SO_REUSEPORT, true);
     TRY(iou_bind, reactor, fd, (struct sockaddr *)&ss, sizeof ss);
     TRY(iou_listen, reactor, fd, 64);
 
-    while (true) {
+    while (!cookie->shutdown) {
         socklen_t len = sizeof ss;
         int afd = iou_accept(reactor, fd, (struct sockaddr *)&ss, &len);
         if (afd < 0)
@@ -139,12 +147,12 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
                 0
             ));
 
-        reactor_fiber(handler, reactor, afd);
+        handler(reactor, afd);
     }
 
     LIST_REMOVE(&cancelation, entries);
     iou_printf(reactor, STDERR_FILENO, "remove %p\n", &cancelation);
-    if (LIST_EMPTY(&((cookie_t*)reactor_cookie(reactor))->cancelations))
+    if (LIST_EMPTY(&cookie->cancelations))
         kill(0, SIGHUP);
 
     TRY(iou_close, reactor, fd);
@@ -208,9 +216,11 @@ main(int argc, char *argv[]) {
     sigaddset(&mask, SIGINT);
     TRY(sigprocmask, SIG_BLOCK, &mask, NULL);
 
+    for (int i = 0 ; i < 64 ; ++i) {
+        reactor_fiber(udp_service, reactor, "::", 12345);
+        reactor_fiber(tcp_service, reactor, "::", 12345, tcp_handler);
+    }
     reactor_fiber(signal_handler, reactor, &mask);
-    reactor_fiber(udp_service, reactor, "::", 12345);
-    reactor_fiber(tcp_service, reactor, "::", 12345, tcp_handler);
 
     reactor_run(reactor);
     reactor_cookie_eat(reactor);
