@@ -17,6 +17,8 @@ void
 iou_semaphore_wait(reactor_t * reactor, iou_semaphore_t * semaphore) {
     const static iou_semaphore_value_t n = 1;
     iou_semaphore_value_t value = atomic_load_explicit(&semaphore->value, memory_order_relaxed);
+    if (value < n && iou_yield(reactor))
+        value = atomic_load_explicit(&semaphore->value, memory_order_relaxed);
     do {
         while (value < n) {
             iou_futex_wait32(reactor, (uint32_t*)&semaphore->value, value, timespec_block);
