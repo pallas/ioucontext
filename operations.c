@@ -190,6 +190,11 @@ iou_fadvise(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
     return IOU(reactor, fadvise, fd, offset, len, advice);
 }
 
+void
+iou_fadvise_fast(reactor_t * reactor, int fd, off_t offset, off_t len, int advice) {
+    IOU_FAKE(reactor, fadvise, fd, offset, len, advice);
+}
+
 int
 iou_fallocate(reactor_t * reactor, int fd, int mode, off_t offset, off_t len) {
     return IOU(reactor, fallocate, fd, mode, offset, len);
@@ -512,6 +517,11 @@ iou_listen(reactor_t * reactor, int sockfd, int backlog) {
 int
 iou_madvise(reactor_t * reactor, void *addr, size_t len, int advice) {
     return IOU(reactor, madvise, addr, len, advice);
+}
+
+void
+iou_madvise_fast(reactor_t * reactor, void *addr, size_t len, int advice) {
+    IOU_FAKE(reactor, madvise, addr, len, advice);
 }
 
 int
