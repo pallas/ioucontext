@@ -31,7 +31,7 @@ source(reactor_t * reactor, int from, int to, int efd) {
     int pipe_buf_size = min(max_pipe(from), max_pipe(to));
 
     if (!isatty(from))
-        iou_fadvise(reactor, from, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED);
+        iou_fadvise_fast(reactor, from, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED);
 
     int64_t bytes; // must be signed
     while ((bytes = iou_splice(reactor, from, to, pipe_buf_size)) > 0)
