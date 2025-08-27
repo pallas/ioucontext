@@ -54,7 +54,7 @@ reverse_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * a
 }
 
 void
-resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name, iou_semaphore_t * semaphore) {
+resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * name) {
     struct sockaddr_storage sockaddr;
     socklen_t socklen = sockaddr_parse(&sockaddr, name, 0);
 
@@ -62,13 +62,16 @@ resolve_dns(reactor_t * reactor, iou_ares_data_t * iou_ares_data, const char * n
         reverse_dns(reactor, iou_ares_data, name, &sockaddr, socklen);
     else
         forward_dns(reactor, iou_ares_data, name);
-
-    iou_semaphore_post(reactor, semaphore);
 }
+
 void
-resolve_dns_free(reactor_t * reactor, iou_ares_data_t * iou_ares_data, char * name, iou_semaphore_t * semaphore) {
-    resolve_dns(reactor, iou_ares_data, name, semaphore);
-    free(name);
+dns_worker(reactor_t * reactor, iou_ares_data_t * iou_ares_data, iou_queue_t * queue) {
+    char * name;
+    while (name = (char *)iou_queue_dequeue(reactor, queue)) {
+        resolve_dns(reactor, iou_ares_data, name);
+        free(name);
+    }
+    iou_queue_enqueue(reactor, queue, 0);
 }
 
 int
@@ -86,10 +89,13 @@ main(int argc, const char *argv[]) {
     | ARES_OPT_ROTATE
     );
 
-    iou_semaphore_t semaphore;
-    iou_semaphore(&semaphore, 64);
-
     if (argc <= 1) {
+        iou_queue_t queue;
+        iou_queue(&queue);
+
+        for (int i = 0 ; i < 256 ; ++i)
+            reactor_fiber(dns_worker, reactor, &iou_ares_data, &queue);
+
         FILE * f = iou_fdopen(reactor, STDIN_FILENO, "r");
         if (!f)
             abort();
@@ -101,18 +107,16 @@ main(int argc, const char *argv[]) {
             char *cursor = buffer;
             while (token = strsep(&cursor, " \t\n")) {
                 if (*token)
-                if (token = strdup(token)) {
-                    iou_semaphore_wait(reactor, &semaphore);
-                    reactor_fiber(resolve_dns_free, reactor, &iou_ares_data, token, &semaphore);
-                }
+                if (token = strdup(token))
+                    iou_queue_enqueue(reactor, &queue, (uintptr_t)token);
             }
         }
 
         fclose(f);
         free(buffer);
+        iou_queue_enqueue(reactor, &queue, 0);
     } else for (int i = 1 ; i < argc ; ++i) {
-        iou_semaphore_wait(reactor, &semaphore);
-        reactor_fiber(resolve_dns, reactor, &iou_ares_data, argv[i], &semaphore);
+        reactor_fiber(resolve_dns, reactor, &iou_ares_data, argv[i]);
     }
 
     reactor_run(reactor);
