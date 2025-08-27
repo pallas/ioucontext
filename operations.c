@@ -319,7 +319,7 @@ typedef struct _iou_cookie_s {
 static
 ssize_t _iou_cookie_read(void *_cookie, char *buf, size_t size) {
     _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
-    ssize_t n = ERRNO(iou_pread, cookie->reactor, cookie->fd, buf, size, cookie->offset);
+    ssize_t n = ERRNO(iou_pread, cookie->reactor ?: reactor_get(), cookie->fd, buf, size, cookie->offset);
     if (n > 0 && cookie->offset >= 0)
         cookie->offset += n;
     return n;
@@ -328,7 +328,7 @@ ssize_t _iou_cookie_read(void *_cookie, char *buf, size_t size) {
 static
 ssize_t _iou_cookie_write(void *_cookie, const char *buf, size_t size) {
     _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
-    ssize_t n = ERRNO(iou_pwrite, cookie->reactor, cookie->fd, buf, size, cookie->offset);
+    ssize_t n = ERRNO(iou_pwrite, cookie->reactor ?: reactor_get(), cookie->fd, buf, size, cookie->offset);
     if (n > 0 && cookie->offset >= 0)
         cookie->offset += n;
     return n < 0 ? 0 : n;
@@ -355,7 +355,7 @@ int _iou_cookie_seek_errno(void *_cookie, off_t *offset, int whence) {
     } break;
 
     case SEEK_END: {
-        ssize_t end = iou_fd_size(cookie->reactor, cookie->fd);
+        ssize_t end = iou_fd_size(cookie->reactor ?: reactor_get(), cookie->fd);
         if (end < 0)
             return end;
 
@@ -383,7 +383,7 @@ int _iou_cookie_seek(void *_cookie, off_t *offset, int whence) {
 static
 int _iou_cookie_close(void *_cookie) {
     _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
-    int result = ERRNO(iou_close, cookie->reactor, cookie->fd);
+    int result = ERRNO(iou_close, cookie->reactor ?: reactor_get(), cookie->fd);
     free(cookie);
     return result;
 }
@@ -394,7 +394,7 @@ iou_fdopen(reactor_t * reactor, int fd, const char *mode) {
     if (UNLIKELY(!cookie))
         return NULL;
     *cookie = (_iou_cookie_t){
-        .reactor = reactor,
+        .reactor = NULL,
         .fd = fd,
         .offset = lseek(fd, 0, SEEK_CUR),
     };
