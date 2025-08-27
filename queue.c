@@ -14,6 +14,8 @@ iou_queue(iou_queue_t * queue) {
     assert(iou_queue__size == sizeof(queue->items)/sizeof(*queue->items));
     for (iou_queue_index_t i = 0 ; i < iou_queue__size ; ++i)
         atomic_init(&queue->epochs[i], i);
+    iou_eventcount(&queue->fill);
+    iou_eventcount(&queue->drain);
     atomic_init(&queue->enqueue, 0);
     atomic_init(&queue->dequeue, 0);
 }
