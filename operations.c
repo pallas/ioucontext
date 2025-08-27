@@ -313,19 +313,71 @@ iou_fdatasync_range(reactor_t * reactor, int fd, off_t start, off_t length) {
 typedef struct _iou_cookie_s {
     reactor_t * reactor;
     int fd;
+    off_t offset;
 } _iou_cookie_t;
 
 static
 ssize_t _iou_cookie_read(void *_cookie, char *buf, size_t size) {
     _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
-    return ERRNO(iou_read, cookie->reactor, cookie->fd, buf, size);
+    ssize_t n = ERRNO(iou_pread, cookie->reactor, cookie->fd, buf, size, cookie->offset);
+    if (n > 0 && cookie->offset >= 0)
+        cookie->offset += n;
+    return n;
 }
 
 static
 ssize_t _iou_cookie_write(void *_cookie, const char *buf, size_t size) {
     _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
-    int n = iou_write(cookie->reactor, cookie->fd, buf, size);
+    ssize_t n = ERRNO(iou_pwrite, cookie->reactor, cookie->fd, buf, size, cookie->offset);
+    if (n > 0 && cookie->offset >= 0)
+        cookie->offset += n;
     return n < 0 ? 0 : n;
+}
+
+static
+int _iou_cookie_seek_errno(void *_cookie, off_t *offset, int whence) {
+    _iou_cookie_t *cookie = (_iou_cookie_t*)_cookie;
+
+    if (cookie->offset < 0)
+        return -ESPIPE;
+
+    off_t target;
+
+    switch (whence) {
+
+    case SEEK_SET: {
+        target = *offset;
+    } break;
+
+    case SEEK_CUR: {
+        if (__builtin_add_overflow(cookie->offset, *offset, &target))
+            return -EINVAL;
+    } break;
+
+    case SEEK_END: {
+        ssize_t end = iou_fd_size(cookie->reactor, cookie->fd);
+        if (end < 0)
+            return end;
+
+        if (__builtin_add_overflow(end, *offset, &target))
+            return -EINVAL;
+    } break;
+
+    default:
+        return -EINVAL;
+    }
+
+    if (target < 0)
+        return -EINVAL;
+
+    cookie->offset = target;
+    *offset = cookie->offset;
+    return 0;
+}
+
+static
+int _iou_cookie_seek(void *_cookie, off_t *offset, int whence) {
+    return ERRNO(_iou_cookie_seek_errno, _cookie, offset, whence);
 }
 
 static
@@ -344,10 +396,12 @@ iou_fdopen(reactor_t * reactor, int fd, const char *mode) {
     *cookie = (_iou_cookie_t){
         .reactor = reactor,
         .fd = fd,
+        .offset = lseek(fd, 0, SEEK_CUR),
     };
     static const cookie_io_functions_t cookie_io = {
         .read = _iou_cookie_read,
         .write = _iou_cookie_write,
+        .seek = _iou_cookie_seek,
         .close = _iou_cookie_close,
     };
     return fopencookie(cookie, mode, cookie_io);
@@ -1000,6 +1054,7 @@ iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
         _iou_cookie_t cookie = {
             .reactor = reactor,
             .fd = fd,
+            .offset = -1,
         };
         static const cookie_io_functions_t cookie_io = {
             .write = _iou_cookie_write,
@@ -1026,6 +1081,7 @@ iou_vscanf(reactor_t * reactor, int fd, const char *format, va_list args) {
     _iou_cookie_t cookie = {
         .reactor = reactor,
         .fd = fd,
+        .offset = -1,
     };
     static const cookie_io_functions_t cookie_io = {
         .read = _iou_cookie_read,
