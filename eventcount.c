@@ -35,7 +35,7 @@ iou_eventcount_wake(reactor_t * reactor, iou_eventcount_t * eventcount, int n) {
         &eventcount->ticket, &ticket, (ticket & ~1) + 2,
         memory_order_release, memory_order_relaxed
         ) && (ticket & 1)) { }
-    if (ticket & 1)
+    if (n < INT_MAX || (ticket & 1))
         iou_futex_wake32_fast(reactor, (uint32_t*)&eventcount->ticket, n);
 }
 
