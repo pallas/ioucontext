@@ -24,6 +24,7 @@ set(${PROJECT_NAME}_OBJECTS
 	jump_queue
 	mutex
 	operations
+	queue
 	reactor
 	semaphore
 	sockaddr
@@ -43,6 +44,7 @@ set(${PROJECT_NAME}_HEADERS
 	macros
 	mutex
 	operations
+	queue
 	reactor
 	semaphore
 	sockaddr
