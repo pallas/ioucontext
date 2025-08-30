@@ -11,6 +11,7 @@
 #include "queue.h"
 #include "reactor.h"
 #include "semaphore.h"
+#include "slotpool.h"
 #include "sockaddr.h"
 #include "timespec.h"
 

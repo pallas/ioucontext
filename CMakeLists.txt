@@ -27,6 +27,7 @@ set(${PROJECT_NAME}_OBJECTS
 	queue
 	reactor
 	semaphore
+	slotpool
 	sockaddr
 	stack
 	timespec
@@ -47,6 +48,7 @@ set(${PROJECT_NAME}_HEADERS
 	queue
 	reactor
 	semaphore
+	slotpool
 	sockaddr
 	timespec
         )
