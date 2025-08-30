@@ -83,6 +83,7 @@ int iou_mkdir(reactor_t *, const char *pathname, mode_t mode);
 int iou_mkdirat(reactor_t *, int dirfd, const char *pathname, mode_t mode);
 int iou_open(reactor_t *, const char *pathname, int flags, mode_t mode);
 int iou_openat(reactor_t *, int dirfd, const char *pathname, int flags, mode_t mode);
+int iou_pipe(reactor_t *, int *read_fd, int *write_fd, int flags);
 bool iou_poll_hup(reactor_t *, int fd, const struct timespec delta);
 bool iou_poll_in(reactor_t *, int fd, const struct timespec delta);
 bool iou_poll_out(reactor_t *, int fd, const struct timespec delta);

@@ -602,6 +602,20 @@ iou_openat(reactor_t * reactor, int dirfd, const char *pathname, int flags, mode
     return IOU(reactor, openat, dirfd, pathname, flags, mode);
 }
 
+int
+iou_pipe(reactor_t * reactor, int *read_fd, int *write_fd, int flags) {
+    int pipefd[2];
+    int result = IOU(reactor, pipe, pipefd, flags);
+    if (result < 0)
+        return result;
+
+    VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(pipefd, sizeof pipefd);
+    *read_fd = pipefd[0];
+    *write_fd = pipefd[1];
+
+    return 0;
+}
+
 static bool
 iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec delta) {
     int result = IOU_DELTA(reactor, delta, poll_add, fd, mask);
