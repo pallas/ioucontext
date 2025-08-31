@@ -22,6 +22,7 @@ static void
 reactor_set(reactor_t * reactor) {
     struct io_uring_params params = {0};
     params.flags |= IORING_SETUP_SQPOLL;
+    params.flags |= IORING_SETUP_SUBMIT_ALL;
     params.flags |= IORING_SETUP_SINGLE_ISSUER;
 
     cpu_set_t cpu_set;
