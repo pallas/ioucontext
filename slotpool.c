@@ -74,13 +74,12 @@ iou_slotpool_has(reactor_t * reactor, const iou_slotpool_t slotpool[], size_t n)
 }
 
 void
-iou_slotpool_put(reactor_t * reactor, iou_slotpool_t slotpool[], size_t n, size_t index) {
-    if (UNLIKELY(index >= n * iou_slotpool_slots))
+iou_slotpool_put(reactor_t * reactor, iou_slotpool_t slotpool[], size_t n, size_t slot) {
+    if (UNLIKELY(slot >= n * iou_slotpool_slots))
         abort();
 
-    size_t i = index / iou_slotpool_slots;
-    index %= iou_slotpool_slots;
-    iou_slotpool_value_t bit = iou_slotpool__bit(index);
+    size_t i = slot / iou_slotpool_slots;
+    iou_slotpool_value_t bit = iou_slotpool__bit(slot % iou_slotpool_slots);
     iou_slotpool_value_t value = atomic_fetch_or_explicit(&slotpool[i].value, bit, memory_order_release);
 
     if (UNLIKELY(value & bit))
