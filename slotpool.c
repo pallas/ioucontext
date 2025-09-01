@@ -23,16 +23,14 @@ iou_slotpool__bit(size_t index) {
 }
 
 size_t
-iou_slotpool_get(reactor_t * reactor, iou_slotpool_t slotpool[], size_t n) {
+iou_slotpool_try(reactor_t * reactor, iou_slotpool_t slotpool[], size_t n) {
     assert(n);
-    size_t j = 0;
-    struct futex_waitv futexv[n];
-    do {
-        iou_slotpool_value_t potential = 0;
+    size_t i_limit = 4;
+    while (i_limit --> 0) {
         for (size_t i = 0 ; i < n ; ++i) {
+            size_t v_limit = 4;
             iou_slotpool_value_t value = atomic_load_explicit(&slotpool[i].value, memory_order_relaxed);
-            size_t limit = 4;
-            while (value && limit --> 0) {
+            while (value && v_limit --> 0) {
                 size_t index = __builtin_ctz(value);
                 assert(index < iou_slotpool_slots);
                 iou_slotpool_value_t bit = iou_slotpool__bit(index);
@@ -42,17 +40,28 @@ iou_slotpool_get(reactor_t * reactor, iou_slotpool_t slotpool[], size_t n) {
                     return index + (i * iou_slotpool_slots);
                 }
             }
-            potential |= value;
         }
-        if (!potential) {
-            for ( ; j < n ; ++j)
-                futexv[j] = (struct futex_waitv){
-                    .val = 0,
-                    .uaddr = (uintptr_t)&slotpool[j].value,
-                    .flags = FUTEX_PRIVATE_FLAG | FUTEX2_SIZE_U32,
-                };
-            iou_futex_waitv(reactor, futexv, n, timespec_block);
-        }
+    }
+    return n * iou_slotpool_slots;
+}
+
+size_t
+iou_slotpool_get(reactor_t * reactor, iou_slotpool_t slotpool[], size_t n) {
+    assert(n);
+    size_t j = 0;
+    struct futex_waitv futexv[n];
+    do {
+        size_t slot = iou_slotpool_try(reactor, slotpool, n);
+        if (slot < n * iou_slotpool_slots)
+            return slot;
+
+        for ( ; j < n ; ++j)
+            futexv[j] = (struct futex_waitv){
+                .val = 0,
+                .uaddr = (uintptr_t)&slotpool[j].value,
+                .flags = FUTEX_PRIVATE_FLAG | FUTEX2_SIZE_U32,
+            };
+        iou_futex_waitv(reactor, futexv, n, timespec_block);
     } while (true);
 }
 

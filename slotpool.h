@@ -22,6 +22,7 @@ typedef struct iou_slotpool_t {
 } iou_slotpool_t;
 
 void iou_slotpool(iou_slotpool_t slotpool[], size_t n);
+size_t iou_slotpool_try(reactor_t *, iou_slotpool_t slotpool[], size_t n);
 size_t iou_slotpool_get(reactor_t *, iou_slotpool_t slotpool[], size_t n);
 size_t iou_slotpool_has(reactor_t *, const iou_slotpool_t slotpool[], size_t n);
 void iou_slotpool_put(reactor_t *, iou_slotpool_t slotpool[], size_t n, size_t index);
