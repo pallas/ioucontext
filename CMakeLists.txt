@@ -139,6 +139,15 @@ if (LIBCARES AND LIBRUSTLS)
 	endforeach(executable)
 endif()
 
+find_library(LIBNGHTTP2 nghttp2)
+if (LIBNGHTTP2)
+	foreach(executable iou_h2c)
+		add_executable(${executable} ${executable}.c)
+		target_link_libraries(${executable} ${LIBNGHTTP2} ${PROJECT_NAME}-shared)
+		install(TARGETS ${executable} RUNTIME DESTINATION bin)
+	endforeach(executable)
+endif()
+
 install(TARGETS
         ${PROJECT_NAME}-static
         ${PROJECT_NAME}-shared

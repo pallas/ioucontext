@@ -44,6 +44,7 @@ eaten.
 ## Examples
  * iou_cat --- moves bytes between one or more input streams and stdout
  * iou_dns --- resolve dns forward and reverse lookups asynchronously
+ * iou_h2c --- toy HTTP/2 cleartext server on 8000, requires [libnghttp2](https://github.com/nghttp2/nghttp2)
  * iou_port7 --- TCP & UDP echo service, à la [port7](https://github.com/pallas/port7)
  * iou_timers --- use multiple timerfds to make some noise
  * iou_tls --- STDIN -> TLS -> STDOUT
