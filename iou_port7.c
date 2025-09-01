@@ -136,7 +136,7 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
 
     while (!cookie->shutdown) {
         socklen_t len = sizeof ss;
-        int afd = iou_accept(reactor, fd, (struct sockaddr *)&ss, &len);
+        int afd = iou_accept(reactor, fd, (struct sockaddr *)&ss, &len, 0);
         if (afd < 0)
             break;
 

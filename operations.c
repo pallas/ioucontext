@@ -65,12 +65,12 @@
 })
 
 int
-iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen) {
+iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
     assert(addrlen || !addr);
 
     if (addr) VALGRIND_CHECK_MEM_IS_ADDRESSABLE(addr, *addrlen);
 
-    int result = IOU(reactor, accept, fd, addr, addrlen, 0);
+    int result = IOU(reactor, accept, fd, addr, addrlen, flags);
 
     if (addr && result > 0)
         VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(addr, *addrlen);

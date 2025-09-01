@@ -26,7 +26,7 @@ struct timespec;
 typedef struct reactor_s reactor_t;
 typedef struct _IO_FILE FILE;
 
-int iou_accept(reactor_t *, int fd, struct sockaddr *addr, socklen_t *addrlen);
+int iou_accept(reactor_t *, int fd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 void iou_barrier(reactor_t *);
 int iou_bind(reactor_t *, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 void iou_cancel_fd_all(reactor_t *, int fd);
