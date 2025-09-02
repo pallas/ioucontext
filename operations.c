@@ -616,15 +616,39 @@ iou_pipe(reactor_t * reactor, int *read_fd, int *write_fd, int flags) {
     return 0;
 }
 
-static bool
+static unsigned
 iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec delta) {
     int result = IOU_DELTA(reactor, delta, poll_add, fd, mask);
-    return result > 0 && !!(result & mask);
+    if (result < 0)
+        return 0;
+    if (UNLIKELY(result & POLLNVAL))
+        abort();
+    return result;
 }
 
-bool iou_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLRDHUP, delta); }
-bool iou_poll_in(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLIN, delta); }
-bool iou_poll_out(reactor_t * reactor, int fd, const struct timespec delta) { return iou_poll_mask(reactor, fd, POLLOUT, delta); }
+bool
+iou_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) {
+    static const unsigned mask = POLLHUP | POLLRDHUP;
+    static const unsigned fail = POLLERR;
+    unsigned events = iou_poll_mask(reactor, fd, mask | fail, delta);
+    return !!(events & mask) && !(events & fail);
+}
+
+bool
+iou_poll_in(reactor_t * reactor, int fd, const struct timespec delta) {
+    static const unsigned mask = POLLIN | POLLPRI;
+    static const unsigned fail = POLLERR | POLLHUP;
+    unsigned events = iou_poll_mask(reactor, fd, mask | fail | POLLRDHUP, delta);
+    return !!(events & mask) && !(events & fail);
+}
+
+bool
+iou_poll_out(reactor_t * reactor, int fd, const struct timespec delta) {
+    static const unsigned mask = POLLOUT;
+    static const unsigned fail = POLLERR | POLLHUP;
+    unsigned events = iou_poll_mask(reactor, fd, mask | fail, delta);
+    return !!(events & mask) && !(events & fail);
+}
 
 ssize_t
 iou_pread(reactor_t * reactor, int fildes, void *buf, size_t nbytes, off_t offset) {
