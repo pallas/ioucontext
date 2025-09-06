@@ -1015,7 +1015,12 @@ iou_splice_all(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
 
 ssize_t
 iou_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len) {
-    return IOU(reactor, splice, fd_in, off_in ? *off_in : -1, fd_out, off_out ? *off_out : -1, len, SPLICE_F_MORE | SPLICE_F_MOVE);
+    int result = IOU(reactor, splice, fd_in, off_in ? *off_in : -1, fd_out, off_out ? *off_out : -1, len, SPLICE_F_MORE | SPLICE_F_MOVE);
+    if (result > 0) {
+        if (off_in) *off_in += result;
+        if (off_out) *off_out += result;
+    }
+    return result;
 }
 
 int
