@@ -211,14 +211,12 @@ process(reactor_t * reactor, int fd, iou_slotpool_t stream_slotpool[], stream_da
 }
 
 void
-fiber(reactor_t * reactor, iou_queue_t *fds, iou_slotpool_t stream_slotpool[], stream_data_t stream_slots[], iou_semaphore_t *semaphore) {
+fiber(reactor_t * reactor, int accept_fd, iou_slotpool_t stream_slotpool[], stream_data_t stream_slots[]) {
     int fd;
-    while ((fd = iou_queue_dequeue(reactor, fds)) >= 0) {
+    while ((fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_NONBLOCK | SOCK_CLOEXEC)) >= 0) {
         process(reactor, fd, stream_slotpool, stream_slots);
         iou_close_fast(reactor, fd);
-        iou_semaphore_post(reactor, semaphore);
     }
-    iou_queue_enqueue(reactor, fds, -1);
 }
 
 typedef struct {
@@ -238,25 +236,13 @@ thread(void *context) {
 
     reactor_t *reactor = reactor_get();
 
-    iou_queue_t fds;
-    iou_queue(&fds);
-
-    iou_semaphore_t semaphore;
-    iou_semaphore(&semaphore, 64);
-
     iou_slotpool_t stream_slotpool[stream_slotpool_n];
     iou_slotpool(stream_slotpool, stream_slotpool_n);
 
     stream_data_t stream_slots[stream_slots_n];
 
     for (unsigned i = 0 ; i < 64 ; ++i)
-        reactor_fiber(fiber, reactor, &fds, stream_slotpool, stream_slots, &semaphore);
-
-    int fd;
-    while (iou_semaphore_wait(reactor, &semaphore), (fd = iou_accept(reactor, info->accept_fd, NULL, 0, SOCK_NONBLOCK | SOCK_CLOEXEC)) >= 0)
-        iou_queue_enqueue(reactor, &fds, fd);
-
-    iou_queue_enqueue(reactor, &fds, -1);
+        reactor_fiber(fiber, reactor, info->accept_fd, stream_slotpool, stream_slots);
 
     reactor_run(reactor);
     return 0;
