@@ -226,9 +226,8 @@ reactor_enter_core(reactor_t * reactor) {
     }
 }
 
-static
-__attribute__((noipa))
-void reactor_sigjmp_core(reactor_t * reactor, todo_sigjmp_t * todo) {
+static __attribute__((noipa)) void
+reactor_sigjmp_core(reactor_t * reactor, todo_sigjmp_t * todo) {
     if (!sigsetjmp(*make_todo_sigjmp(todo, reactor->current), false)) {
         reactor_enter_core(reactor);
         abort();
