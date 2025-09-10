@@ -327,18 +327,24 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     }
 }
 
-static void
+static __attribute__((noipa)) void
 reactor_defer(reactor_t * reactor) {
     todo_sigjmp_t todo;
-    jump_queue_enqueue(&reactor->todos, &todo.jump);
-    reactor_sigjmp_core(reactor, &todo);
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
+        jump_queue_enqueue(&reactor->todos, &todo.jump);
+        reactor_enter_core(reactor);
+        abort();
+    }
 }
 
-static void
+static __attribute__((noipa)) void
 reactor_refer(reactor_t * reactor) {
     todo_sigjmp_t todo;
-    jump_queue_requeue(&reactor->todos, &todo.jump);
-    reactor_sigjmp_core(reactor, &todo);
+    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
+        jump_queue_requeue(&reactor->todos, &todo.jump);
+        reactor_enter_core(reactor);
+        abort();
+    }
 }
 
 void
