@@ -226,15 +226,24 @@ reactor_enter_core(reactor_t * reactor) {
     }
 }
 
+static
+__attribute__((noipa))
+void reactor_sigjmp_core(reactor_t * reactor, todo_sigjmp_t * todo) {
+    if (!sigsetjmp(*make_todo_sigjmp(todo, reactor->current), false)) {
+        reactor_enter_core(reactor);
+        abort();
+    }
+}
+
 int
 reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        io_uring_sqe_set_data(sqe, (void*)&todo.jump);
-        if (reactor->pivot == pivoting)
-            reactor->pivot = &todo.jump;
-        reactor_enter_core(reactor);
-    }
+    io_uring_sqe_set_data(sqe, (void*)&todo.jump);
+
+    if (reactor->pivot == pivoting)
+        reactor->pivot = &todo.jump;
+
+    reactor_sigjmp_core(reactor, &todo);
     return jump_result(&todo.jump);
 }
 
@@ -243,22 +252,21 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
     assert(reactor->reserved >= 2);
 
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        io_uring_sqe_set_data(sqe, (void*)&todo.jump);
-        io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
+    io_uring_sqe_set_data(sqe, (void*)&todo.jump);
+    io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
 
-        struct __kernel_timespec kts = { .tv_nsec = 32767 };
+    struct __kernel_timespec kts = { .tv_nsec = 32767 };
 
-        sqe = reactor_sqe(reactor);
-        io_uring_prep_link_timeout(sqe, &kts, 0
-            | IORING_TIMEOUT_BOOTTIME
-            );
-        io_uring_sqe_set_data(sqe, NULL);
+    sqe = reactor_sqe(reactor);
+    io_uring_prep_link_timeout(sqe, &kts, 0
+        | IORING_TIMEOUT_BOOTTIME
+        );
+    io_uring_sqe_set_data(sqe, NULL);
 
-        if (reactor->pivot == pivoting)
-            reactor->pivot = &todo.jump;
-        reactor_enter_core(reactor);
-    }
+    if (reactor->pivot == pivoting)
+        reactor->pivot = &todo.jump;
+
+    reactor_sigjmp_core(reactor, &todo);
     return jump_result(&todo.jump);
 }
 
@@ -267,27 +275,26 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
     assert(reactor->reserved >= 2);
 
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        io_uring_sqe_set_data(sqe, (void*)&todo.jump);
-        io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
+    io_uring_sqe_set_data(sqe, (void*)&todo.jump);
+    io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
 
-        when = normalize_timespec(when);
-        struct __kernel_timespec kts = {
-            .tv_sec = when.tv_sec,
-            .tv_nsec = when.tv_nsec,
-        };
+    when = normalize_timespec(when);
+    struct __kernel_timespec kts = {
+        .tv_sec = when.tv_sec,
+        .tv_nsec = when.tv_nsec,
+    };
 
-        sqe = reactor_sqe(reactor);
-        io_uring_prep_link_timeout(sqe, &kts, 0
-            | IORING_TIMEOUT_ABS
-            | IORING_TIMEOUT_BOOTTIME
-            );
-        io_uring_sqe_set_data(sqe, NULL);
+    sqe = reactor_sqe(reactor);
+    io_uring_prep_link_timeout(sqe, &kts, 0
+        | IORING_TIMEOUT_ABS
+        | IORING_TIMEOUT_BOOTTIME
+        );
+    io_uring_sqe_set_data(sqe, NULL);
 
-        if (reactor->pivot == pivoting)
-            reactor->pivot = &todo.jump;
-        reactor_enter_core(reactor);
-    }
+    if (reactor->pivot == pivoting)
+        reactor->pivot = &todo.jump;
+
+    reactor_sigjmp_core(reactor, &todo);
     return jump_result(&todo.jump);
 }
 
@@ -301,10 +308,8 @@ reactor_future_fake(reactor_t * reactor, struct io_uring_sqe * sqe) {
 void
 reactor_park(reactor_t * reactor, jump_chain_t ** jump) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        *jump = &todo.jump;
-        reactor_enter_core(reactor);
-    }
+    *jump = &todo.jump;
+    reactor_sigjmp_core(reactor, &todo);
 }
 
 void
@@ -325,19 +330,15 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
 static void
 reactor_defer(reactor_t * reactor) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        jump_queue_enqueue(&reactor->todos, &todo.jump);
-        reactor_enter_core(reactor);
-    }
+    jump_queue_enqueue(&reactor->todos, &todo.jump);
+    reactor_sigjmp_core(reactor, &todo);
 }
 
 static void
 reactor_refer(reactor_t * reactor) {
     todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        jump_queue_requeue(&reactor->todos, &todo.jump);
-        reactor_enter_core(reactor);
-    }
+    jump_queue_requeue(&reactor->todos, &todo.jump);
+    reactor_sigjmp_core(reactor, &todo);
 }
 
 void
