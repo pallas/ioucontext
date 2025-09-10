@@ -59,7 +59,7 @@ reactor_set(reactor_t * reactor) {
     reactor->stack_cache = NULL;
     reactor->cookie = NULL;
     reactor->cookie_eat = NULL;
-    reactor->sqes = reactor->cqes = reactor->reserved = 0;
+    reactor->sqes = reactor->tare = reactor->cqes = reactor->reserved = 0;
     reactor->current = NULL;
     reactor->pivot = NULL;
     reactor->urandomfd = -1;
@@ -160,6 +160,7 @@ reactor_flush(reactor_t * reactor) {
 
             if (cqe->flags & IORING_CQE_F_MORE) {
                 ++reactor->sqes;
+                ++reactor->tare;
             } else if (reactor->pivot == todo) {
                 reactor->pivot = NULL;
                 jump_queue_requeue(&reactor->todos, todo);
@@ -181,7 +182,13 @@ reactor_cqes(reactor_t * reactor) {
     assert(reactor);
     assert(!reactor->pivot);
 
-    io_uring_submit_and_wait(&reactor->ring, !!jump_queue_empty(&reactor->todos));
+    if (jump_queue_empty(&reactor->todos)) {
+        reactor->tare = reactor->sqes;
+        io_uring_submit_and_wait(&reactor->ring, 1);
+    } else if (reactor->tare != reactor->sqes) {
+        reactor->tare = reactor->sqes;
+        io_uring_submit(&reactor->ring);
+    }
 
     unsigned delta = reactor_flush(reactor);
 
@@ -196,8 +203,14 @@ reactor_enter_core(reactor_t * reactor) {
     while (reactor_runnable(reactor)) {
 
         while (reactor->pivot) {
+            reactor->tare = reactor->sqes;
             TRY(io_uring_submit_and_get_events, &reactor->ring);
             reactor_flush(reactor);
+        }
+
+        if (reactor->tare != reactor->sqes) {
+            reactor->tare = reactor->sqes;
+            io_uring_submit(&reactor->ring);
         }
 
         while (!jump_queue_empty(&reactor->todos) && !reactor_will_block(reactor, 1))
@@ -347,6 +360,7 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
             if (io_uring_cq_ready(&reactor->ring))
                 reactor_refer(reactor);
 
+            reactor->tare = reactor->sqes;
             TRY(io_uring_submit_and_get_events, &reactor->ring);
 
             if (!io_uring_cq_ready(&reactor->ring))

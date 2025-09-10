@@ -25,7 +25,7 @@ typedef struct reactor_s {
     reactor_stack_cache_t * stack_cache;
     void *cookie;
     reactor_cookie_eat_t cookie_eat;
-    unsigned sqes, cqes;
+    unsigned sqes, tare, cqes;
     unsigned reserved;
     long int queue_depth;
     fiber_t *current;
