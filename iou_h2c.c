@@ -16,8 +16,6 @@
 
 const static char words_file[] = "/usr/share/dict/words";
 
-enum { stream_slotpool_n = 4, stream_slots_n = stream_slotpool_n * iou_slotpool_slots, };
-
 typedef struct stream_data_s stream_data_t;
 typedef struct session_data_s session_data_t;
 
@@ -32,10 +30,33 @@ typedef struct stream_data_s {
 typedef struct session_data_s {
     reactor_t *reactor;
     int fd;
-    iou_slotpool_t *stream_slotpool;
-    stream_data_t *stream_slots;
-    stream_data_list_t streams;
+    stream_data_list_t free_streams;
+    stream_data_list_t inuse_streams;
 } session_data_t;
+
+static stream_data_t *
+stream_data_get(session_data_t *session_data) {
+    if (LIST_EMPTY(&session_data->free_streams))
+        return NULL;
+
+    stream_data_t *stream_data = LIST_FIRST(&session_data->free_streams);
+    LIST_REMOVE(stream_data, entry);
+
+    *stream_data = (stream_data_t){ .fd = -1, };
+
+    LIST_INSERT_HEAD(&session_data->inuse_streams, stream_data, entry);
+    return stream_data;
+}
+
+static void
+stream_data_put(session_data_t *session_data, stream_data_t *stream_data) {
+    LIST_REMOVE(stream_data, entry);
+
+    if (stream_data->fd >= 0)
+        iou_close_fast(session_data->reactor, stream_data->fd);
+
+    LIST_INSERT_HEAD(&session_data->free_streams, stream_data, entry);
+}
 
 nghttp2_option *option;
 nghttp2_session_callbacks *callbacks;
@@ -65,21 +86,17 @@ int
 iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *frame, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
 
-    size_t slot = iou_slotpool_try(session_data->reactor, session_data->stream_slotpool, stream_slotpool_n);
-    if (slot >= stream_slots_n) {
+    stream_data_t *stream_data = stream_data_get(session_data);
+    if (!stream_data) {
         nghttp2_submit_rst_stream(session, 0, frame->hd.stream_id, NGHTTP2_ENHANCE_YOUR_CALM);
         return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
     }
 
-    stream_data_t *stream_data = &session_data->stream_slots[slot];
-    *stream_data = (stream_data_t){
-        .fd = iou_open(session_data->reactor, words_file, O_RDONLY, 0),
-    };
+    stream_data->fd = iou_open(session_data->reactor, words_file, O_RDONLY, 0);
 
     if (stream_data->fd >= 0)
         iou_fadvise(session_data->reactor, stream_data->fd, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_NOREUSE);
 
-    LIST_INSERT_HEAD(&session_data->streams, stream_data, entry);
     nghttp2_session_set_stream_user_data(session, frame->hd.stream_id, stream_data);
     return 0;
 }
@@ -155,15 +172,6 @@ iou_on_frame_recv_callback(nghttp2_session *session, const nghttp2_frame *frame,
     return 0;
 }
 
-static void
-stream_data_cleanup(session_data_t *session_data, stream_data_t *stream_data) {
-    LIST_REMOVE(stream_data, entry);
-    if (stream_data->fd >= 0)
-        iou_close_fast(session_data->reactor, stream_data->fd);
-    size_t slot = stream_data - session_data->stream_slots;
-    iou_slotpool_put(session_data->reactor, session_data->stream_slotpool, stream_slotpool_n, slot);
-}
-
 int
 iou_on_stream_close_callback(nghttp2_session *session, int32_t stream_id, uint32_t error_code, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
@@ -171,31 +179,20 @@ iou_on_stream_close_callback(nghttp2_session *session, int32_t stream_id, uint32
     stream_data_t *stream_data = nghttp2_session_get_stream_user_data(session, stream_id);
     if (stream_data) {
         nghttp2_session_set_stream_user_data(session, stream_id, NULL);
-        stream_data_cleanup(session_data, stream_data);
+        stream_data_put(session_data, stream_data);
     }
 
     return 0;
 }
 
 void
-process(reactor_t * reactor, int fd, iou_slotpool_t stream_slotpool[], stream_data_t stream_slots[]) {
-    nghttp2_session *session;
-    session_data_t session_data = {
-        .reactor = reactor,
-        .fd = fd,
-        .stream_slotpool = stream_slotpool,
-        .stream_slots = stream_slots,
-        .streams = LIST_HEAD_INITIALIZER(streams),
-    };
-    nghttp2_session_server_new3(&session, callbacks, &session_data, NULL, NULL);
+process(reactor_t * reactor, session_data_t * session_data, nghttp2_settings_entry * settings, size_t settings_n) {
+    nghttp2_session *session = NULL;
+    nghttp2_session_server_new3(&session, callbacks, session_data, NULL, NULL);
     iou_printf(reactor, STDERR_FILENO, "%p session begin\n", session);
 
-    nghttp2_settings_entry settings[] = {
-        { NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, 16 },
-    };
-
     int result;
-    if (!(result = nghttp2_submit_settings(session, NGHTTP2_FLAG_NONE, settings, sizeof(settings)/sizeof(*settings))))
+    if (!(result = nghttp2_submit_settings(session, NGHTTP2_FLAG_NONE, settings, settings_n)))
     while (nghttp2_session_want_read(session) || nghttp2_session_want_write(session)) {
         if (nghttp2_session_want_read(session) && (result = nghttp2_session_recv(session))) break;
         if (nghttp2_session_want_write(session) && (result = nghttp2_session_send(session))) break;
@@ -203,19 +200,32 @@ process(reactor_t * reactor, int fd, iou_slotpool_t stream_slotpool[], stream_da
 
     while (nghttp2_session_want_write(session) && !(result = nghttp2_session_send(session))) { }
 
-    while (!LIST_EMPTY(&session_data.streams))
-        stream_data_cleanup(&session_data, LIST_FIRST(&session_data.streams));
-
     iou_printf(reactor, STDERR_FILENO, "%p session end %s\n", session, nghttp2_strerror(result));
     nghttp2_session_del(session);
 }
 
 void
-fiber(reactor_t * reactor, int accept_fd, iou_slotpool_t stream_slotpool[], stream_data_t stream_slots[]) {
-    int fd;
-    while ((fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_NONBLOCK | SOCK_CLOEXEC)) >= 0) {
-        process(reactor, fd, stream_slotpool, stream_slots);
-        iou_close_fast(reactor, fd);
+fiber(reactor_t * reactor, int accept_fd) {
+    session_data_t session_data = {
+        .reactor = reactor,
+        .free_streams = LIST_HEAD_INITIALIZER(free_streams),
+        .inuse_streams = LIST_HEAD_INITIALIZER(inuse_streams),
+    };
+
+    const size_t streams_n = 32;
+    stream_data_t stream_datas[streams_n] = { };
+    for (size_t i = 0 ; i < streams_n ; ++i)
+        LIST_INSERT_HEAD(&session_data.free_streams, &stream_datas[i], entry);
+
+    nghttp2_settings_entry settings[] = {
+        { NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, streams_n },
+    };
+
+    while ((session_data.fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_NONBLOCK | SOCK_CLOEXEC)) >= 0) {
+        process(reactor, &session_data, settings, sizeof(settings)/sizeof(*settings));
+        while (!LIST_EMPTY(&session_data.inuse_streams))
+            stream_data_put(&session_data, LIST_FIRST(&session_data.inuse_streams));
+        iou_close_fast(reactor, session_data.fd);
     }
 }
 
@@ -236,13 +246,8 @@ thread(void *context) {
 
     reactor_t *reactor = reactor_get();
 
-    iou_slotpool_t stream_slotpool[stream_slotpool_n];
-    iou_slotpool(stream_slotpool, stream_slotpool_n);
-
-    stream_data_t stream_slots[stream_slots_n];
-
     for (unsigned i = 0 ; i < 64 ; ++i)
-        reactor_fiber(fiber, reactor, info->accept_fd, stream_slotpool, stream_slots);
+        reactor_fiber(fiber, reactor, info->accept_fd);
 
     reactor_run(reactor);
     return 0;
