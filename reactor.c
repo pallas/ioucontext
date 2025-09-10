@@ -25,6 +25,8 @@ reactor_set(reactor_t * reactor) {
     params.flags |= IORING_SETUP_SUBMIT_ALL;
     params.flags |= IORING_SETUP_SINGLE_ISSUER;
 
+    params.sq_thread_idle = 100;
+
     cpu_set_t cpu_set;
     CPU_ZERO_S(sizeof(cpu_set_t), &cpu_set);
     TRY(sched_getaffinity, 0, sizeof(cpu_set_t), &cpu_set);
