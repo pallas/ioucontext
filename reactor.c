@@ -225,7 +225,7 @@ reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
 int
 reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
-    assert(reactor->reserved >= 1);
+    assert(reactor->reserved >= 2);
 
     todo_sigjmp_t todo;
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
@@ -249,7 +249,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
 int
 reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct timespec when) {
-    assert(reactor->reserved >= 1);
+    assert(reactor->reserved >= 2);
 
     todo_sigjmp_t todo;
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
