@@ -11,16 +11,48 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <unistd.h>
+
+static size_t stack__page_size = 0;
+static size_t __stack__page_size() { return sysconf(_SC_PAGESIZE); }
+__attribute__((constructor)) static void stack__page_size_construct(void) {
+    stack__page_size = __stack__page_size();
+}
+
+static __attribute__((const)) size_t
+stack_page_size() {
+    if (UNLIKELY(!stack__page_size))
+        stack__page_size = __stack__page_size();
+
+    return stack__page_size;
+}
 
 stack_t
 stack_get(size_t size) {
     const int prot = PROT_READ | PROT_WRITE;
     const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK | MAP_NORESERVE;
+
+    const size_t page_size = stack_page_size();
+    const size_t page_mask = page_size - 1;
+    assert(0 == (page_size & page_mask));
+    const size_t round_size = size + (-size & page_mask);
+
+    void * first = mmap(NULL, round_size + 2*page_size, prot, flags, -1, 0);
+    if (UNLIKELY(MAP_FAILED == first))
+        abort();
     stack_t s = {
-        .ss_sp = TRY(mmap, NULL, size, prot, flags, -1, 0),
-        .ss_size = size,
+        .ss_sp = first + page_size,
+        .ss_size = round_size,
     };
     s.ss_flags = VALGRIND_STACK_REGISTER(s.ss_sp, s.ss_sp + s.ss_size);
+
+    TRY(mprotect, first, page_size, PROT_NONE);
+    VALGRIND_MAKE_MEM_NOACCESS(first, page_size);
+
+    void * last = first + page_size + round_size;
+    TRY(mprotect, last, page_size, PROT_NONE);
+    VALGRIND_MAKE_MEM_NOACCESS(last, page_size);
+
     return s;
 }
 
@@ -93,7 +125,8 @@ stack_split(stack_t *s, size_t size, size_t align) {
 void
 stack_put(stack_t s) {
     VALGRIND_STACK_DEREGISTER(s.ss_flags);
-    TRY(munmap, s.ss_sp, s.ss_size);
+    const size_t page_size = stack_page_size();
+    TRY(munmap, s.ss_sp - page_size, s.ss_size + 2*page_size);
 }
 
 rlim_t
