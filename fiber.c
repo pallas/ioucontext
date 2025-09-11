@@ -38,7 +38,7 @@ __attribute__((malloc, malloc(fiber_put, 1)))
 fiber_get(reactor_t *reactor) {
     assert(reactor);
 
-    stack_t main_stack = reactor_stack_has(reactor) ? reactor_stack_get(reactor) : stack_nofork(stack_get_rlimit());
+    stack_t main_stack = reactor_stack_has(reactor) ? reactor_stack_get(reactor) : stack_nofork(stack_get_default());
     stack_t full_stack = main_stack;
 
     fiber_t * fiber = stack_push(&main_stack, fiber_t);

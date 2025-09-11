@@ -103,6 +103,30 @@ rlimit_stack() {
     return rl.rlim_cur;
 }
 
+static size_t
+__stack__default_size() {
+    size_t min_stack_size = SIGSTKSZ;
+    size_t max_stack_size = rlimit_stack();
+
+    const char * env_stack_size = getenv("IOUCONTEXT_STACK_SIZE");
+    size_t stack_size = env_stack_size ? strtol(env_stack_size, NULL, 0) : 131072;
+
+    return stack_size < min_stack_size ? min_stack_size
+        : stack_size > max_stack_size ? max_stack_size
+        : stack_size;
+}
+
+static size_t stack__default_size = 0;
+__attribute__((constructor)) static void stack__default_size_construct(void) { stack__default_size = __stack__default_size(); }
+
+stack_t
+stack_get_default() {
+    if (!stack__default_size)
+        stack__default_size = __stack__default_size();
+
+    return stack_get(stack__default_size);
+}
+
 stack_t stack_get_rlimit() { return stack_get(rlimit_stack()); }
 stack_t stack_get_signal() { return stack_get(SIGSTKSZ); }
 

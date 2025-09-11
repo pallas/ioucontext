@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 stack_t stack_get(size_t size);
+stack_t stack_get_default();
 stack_t stack_get_rlimit();
 stack_t stack_get_signal();
 
