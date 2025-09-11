@@ -10,10 +10,25 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+static size_t arena__page_size = 0;
+static size_t __arena__page_size() { return sysconf(_SC_PAGESIZE); }
+__attribute__((constructor)) static void arena__page_size_construct(void) {
+    arena__page_size = __arena__page_size();
+}
+
+static size_t
+__attribute__((const))
+arena_page_size() {
+    if (UNLIKELY(!arena__page_size))
+        arena__page_size = __arena__page_size();
+
+    return arena__page_size;
+}
+
 static size_t
 __attribute__((const))
 to_page_size(size_t size) {
-    const size_t page_size = sysconf(_SC_PAGESIZE);
+    const size_t page_size = arena_page_size();
     const size_t page_mask = page_size - 1;
     assert(0 == (page_size & page_mask));
     return size + (-size & page_mask);
