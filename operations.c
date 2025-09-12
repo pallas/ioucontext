@@ -803,6 +803,8 @@ iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, 
     VALGRIND_CHECK_MEM_IS_DEFINED(message, length);
     VALGRIND_CHECK_MEM_IS_DEFINED(dest_addr, dest_len);
 
+    static const size_t zero_copy_threshold = 1<<15;
+
     struct iovec iov = {
         .iov_base = (void*)message,
         .iov_len = length
@@ -815,7 +817,10 @@ iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, 
         .msg_namelen = dest_len,
     };
 
-    return IOU(reactor, sendmsg_zc, socket, &msg, flags);
+    return length >= zero_copy_threshold
+        ? IOU(reactor, sendmsg_zc, socket, &msg, flags)
+        : IOU(reactor, sendmsg, socket, &msg, flags)
+        ;
 }
 
 int
