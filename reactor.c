@@ -248,7 +248,7 @@ reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
 int
 reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
-    assert(reactor->reserved >= 2);
+    assert(reactor->reserved >= 1);
 
     todo_sigjmp_t todo;
     io_uring_sqe_set_data(sqe, (void*)&todo.jump);
@@ -271,7 +271,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
 int
 reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct timespec when) {
-    assert(reactor->reserved >= 2);
+    assert(reactor->reserved >= 1);
 
     todo_sigjmp_t todo;
     io_uring_sqe_set_data(sqe, (void*)&todo.jump);
