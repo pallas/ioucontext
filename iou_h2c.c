@@ -219,6 +219,7 @@ fiber(reactor_t * reactor, int accept_fd) {
 
     nghttp2_settings_entry settings[] = {
         { NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, streams_n },
+        { NGHTTP2_SETTINGS_NO_RFC7540_PRIORITIES, 1 },
     };
 
     while ((session_data.fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_NONBLOCK | SOCK_CLOEXEC)) >= 0) {
