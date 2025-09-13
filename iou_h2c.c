@@ -70,6 +70,12 @@ stream_data_put(session_data_t *session_data, stream_data_t *stream_data) {
 nghttp2_option *option;
 nghttp2_session_callbacks *callbacks;
 
+void
+iou_rand_callback(uint8_t *dest, size_t destlen) {
+    if (destlen != iou_getrandom(reactor_get(), dest, destlen))
+        abort();
+}
+
 nghttp2_ssize
 iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
@@ -371,6 +377,7 @@ main(int argc, char *argv[]) {
     nghttp2_option_set_no_http_messaging(option, true);
 
     TRY(nghttp2_session_callbacks_new, &callbacks);
+    nghttp2_session_callbacks_set_rand_callback(callbacks, iou_rand_callback);
     nghttp2_session_callbacks_set_send_callback2(callbacks, iou_send_callback2);
     nghttp2_session_callbacks_set_send_data_callback(callbacks, iou_send_data_callback);
     nghttp2_session_callbacks_set_recv_callback2(callbacks, iou_recv_callback2);
