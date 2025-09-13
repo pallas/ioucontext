@@ -272,6 +272,13 @@ iou_on_stream_close_callback(nghttp2_session *session, int32_t stream_id, uint32
     return 0;
 }
 
+int
+iou_error_callback2(nghttp2_session *session, int lib_error_code, const char *msg, size_t len, void *user_data) {
+    session_data_t *session_data = (session_data_t *)user_data;
+    iou_printf(session_data->reactor, STDERR_FILENO, "%p session error %d %.*s\n", session, lib_error_code, (int)len, msg);
+    return 0;
+}
+
 void
 process(reactor_t * reactor, session_data_t * session_data, nghttp2_settings_entry * settings, size_t settings_n) {
     nghttp2_session *session = NULL;
@@ -386,6 +393,7 @@ main(int argc, char *argv[]) {
     nghttp2_session_callbacks_set_on_header_callback2(callbacks, iou_on_header_callback2);
     nghttp2_session_callbacks_set_on_frame_recv_callback(callbacks, iou_on_frame_recv_callback);
     nghttp2_session_callbacks_set_on_stream_close_callback(callbacks, iou_on_stream_close_callback);
+    nghttp2_session_callbacks_set_error_callback2(callbacks, iou_error_callback2);
 
 
     sigset_t mask;
