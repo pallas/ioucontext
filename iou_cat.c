@@ -63,22 +63,22 @@ drain(reactor_t * reactor, int from, int to, int efd) {
 
 void
 cat(reactor_t * reactor, int argc, const char *argv[]) {
-    int pipes[2];
-    TRY(pipe, pipes);
+    int pipe_out, pipe_in;
+    TRY(iou_pipe, reactor, &pipe_out, &pipe_in, O_CLOEXEC);
 
     int efd = TRY(eventfd, 0, 0);
 
-    reactor_fiber(drain, reactor, pipes[0], STDOUT_FILENO, efd);
+    reactor_fiber(drain, reactor, pipe_out, STDOUT_FILENO, efd);
 
     if (argc <= 1) {
-        source(reactor, STDIN_FILENO, pipes[1], efd);
+        source(reactor, STDIN_FILENO, pipe_in, efd);
     } else for (int i = 1 ; i < argc ; ++i) {
         if (!strcmp("-", argv[i])) {
-            if (source(reactor, STDIN_FILENO, pipes[1], efd))
+            if (source(reactor, STDIN_FILENO, pipe_in, efd))
                 break;
         } else {
             int fd = TRY(iou_open, reactor, argv[i], O_RDONLY, 0);
-            if (source(reactor, fd, pipes[1], efd))
+            if (source(reactor, fd, pipe_in, efd))
                 break;
             TRY(iou_close, reactor, fd);
         }
