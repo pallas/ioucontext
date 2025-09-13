@@ -70,13 +70,13 @@ stream_data_put(session_data_t *session_data, stream_data_t *stream_data) {
 nghttp2_option *option;
 nghttp2_session_callbacks *callbacks;
 
-void
+static void
 iou_rand_callback(uint8_t *dest, size_t destlen) {
     if (destlen != iou_getrandom(reactor_get(), dest, destlen))
         abort();
 }
 
-nghttp2_ssize
+static nghttp2_ssize
 iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
     int result = iou_send(session_data->reactor, session_data->fd, data, length, MSG_DONTWAIT);
@@ -86,7 +86,7 @@ iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length,
         ;
 }
 
-nghttp2_ssize
+static nghttp2_ssize
 iou_recv_callback2(nghttp2_session *session, uint8_t *buf, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
     int result = iou_recv(session_data->reactor, session_data->fd, buf, length, MSG_DONTWAIT);
@@ -97,7 +97,7 @@ iou_recv_callback2(nghttp2_session *session, uint8_t *buf, size_t length, int fl
         ;
 }
 
-int
+static int
 iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *frame, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
 
@@ -118,7 +118,7 @@ iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *fra
     return 0;
 }
 
-int
+static int
 iou_on_header_callback2(nghttp2_session *session, const nghttp2_frame *frame, nghttp2_rcbuf *name, nghttp2_rcbuf *value, uint8_t flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
 
@@ -225,7 +225,7 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
     .flags = NGHTTP2_NV_FLAG_NONE, \
 }
 
-int
+static int
 iou_on_frame_recv_callback(nghttp2_session *session, const nghttp2_frame *frame, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
 
@@ -259,7 +259,7 @@ iou_on_frame_recv_callback(nghttp2_session *session, const nghttp2_frame *frame,
     return 0;
 }
 
-int
+static int
 iou_on_stream_close_callback(nghttp2_session *session, int32_t stream_id, uint32_t error_code, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
 
@@ -272,7 +272,7 @@ iou_on_stream_close_callback(nghttp2_session *session, int32_t stream_id, uint32
     return 0;
 }
 
-int
+static int
 iou_error_callback2(nghttp2_session *session, int lib_error_code, const char *msg, size_t len, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
     iou_printf(session_data->reactor, STDERR_FILENO, "%p session error %d %.*s\n", session, lib_error_code, (int)len, msg);
