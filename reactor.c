@@ -243,7 +243,7 @@ reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
         reactor->pivot = &todo.jump;
 
     reactor_sigjmp_core(reactor, &todo);
-    return jump_result(&todo.jump);
+    return todo.jump.result;
 }
 
 int
@@ -266,7 +266,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
         reactor->pivot = &todo.jump;
 
     reactor_sigjmp_core(reactor, &todo);
-    return jump_result(&todo.jump);
+    return todo.jump.result;
 }
 
 int
@@ -294,7 +294,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
         reactor->pivot = &todo.jump;
 
     reactor_sigjmp_core(reactor, &todo);
-    return jump_result(&todo.jump);
+    return todo.jump.result;
 }
 
 void
