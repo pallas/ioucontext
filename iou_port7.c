@@ -160,26 +160,26 @@ tcp_service(reactor_t * reactor, const char * name, uint16_t port, void(*handler
 
 void
 tcp_handler(reactor_t * reactor, int fd) {
-    int pipes[2];
-    TRY(pipe, pipes);
+    int pipe_out, pipe_in;
+    TRY(iou_pipe, reactor, &pipe_out, &pipe_in, O_CLOEXEC);
 
     int rcvbuf = iou_getsockopt_int(reactor, fd, SOL_SOCKET, SO_RCVBUF);
-    if (rcvbuf > fcntl(pipes[1], F_GETPIPE_SZ))
-        fcntl(pipes[1], F_SETPIPE_SZ, rcvbuf);
+    if (rcvbuf > fcntl(pipe_in, F_GETPIPE_SZ))
+        fcntl(pipe_in, F_SETPIPE_SZ, rcvbuf);
 
     int sndbuf = iou_getsockopt_int(reactor, fd, SOL_SOCKET, SO_SNDBUF);
-    if (sndbuf > fcntl(pipes[0], F_GETPIPE_SZ))
-        fcntl(pipes[0], F_SETPIPE_SZ, sndbuf);
+    if (sndbuf > fcntl(pipe_out, F_GETPIPE_SZ))
+        fcntl(pipe_out, F_SETPIPE_SZ, sndbuf);
 
     iou_printf(reactor, STDERR_FILENO, "handle fd=%d send=%d recv=%d\n", fd, rcvbuf, sndbuf);
 
     while (true) {
-        ssize_t n = iou_splice(reactor, fd, pipes[1], rcvbuf);
+        ssize_t n = iou_splice(reactor, fd, pipe_in, rcvbuf);
         if (n <= 0)
             break;
         iou_printf(reactor, STDERR_FILENO, "fd %d splice in %zd bytes\n", fd, n);
 
-        n = iou_splice_all(reactor, pipes[0], fd, n);
+        n = iou_splice_all(reactor, pipe_out, fd, n);
         if (n <= 0)
             break;
         iou_printf(reactor, STDERR_FILENO, "fd %d splice out %zd bytes\n", fd, n);
@@ -188,9 +188,9 @@ tcp_handler(reactor_t * reactor, int fd) {
     iou_printf(reactor, STDERR_FILENO, "fd %d close\n", fd);
 
     iou_shutdown_read(reactor, fd);
-    TRY(iou_close, reactor, pipes[1]);
+    TRY(iou_close, reactor, pipe_in);
 
-    TRY(iou_close, reactor, pipes[0]);
+    TRY(iou_close, reactor, pipe_out);
     iou_shutdown_write(reactor, fd);
 
     TRY(iou_close, reactor, fd);
