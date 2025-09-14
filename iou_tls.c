@@ -114,7 +114,7 @@ main(int argc, char *argv[]) {
 
         iou_ares_addr_free(&addr_results[i]);
 
-        if (fd < 0)
+        if (connection || fd < 0)
             continue;
 
         struct sockaddr_storage addr;
@@ -138,7 +138,7 @@ main(int argc, char *argv[]) {
         if (connection)
             iou_ares_cancel(&iou_ares_data);
         else
-            iou_close_fast(reactor, fd);
+            fd = -1;
     }
 
     iou_ares_put(&iou_ares_data);
