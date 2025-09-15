@@ -141,6 +141,7 @@ main(int argc, char *argv[]) {
             fd = -1;
     }
 
+    reactor_run(reactor);
     iou_ares_put(&iou_ares_data);
     ares_library_cleanup();
 
