@@ -317,7 +317,13 @@ fiber(reactor_t * reactor, int accept_fd) {
     };
 
     while ((session_data.fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_CLOEXEC)) >= 0) {
-        process(reactor, &session_data, settings, sizeof(settings)/sizeof(*settings));
+        const struct timespec when = reify_timespec(timespec_ms(5));
+        if (iou_yield(reactor) && timespec_past(dereify_timespec(when))) {
+            const static struct linger linger_zero = { .l_onoff = 1, .l_linger = 0, };
+            iou_setsockopt(reactor, session_data.fd, SOL_SOCKET, SO_LINGER, &linger_zero, sizeof linger_zero);
+        } else {
+            process(reactor, &session_data, settings, sizeof(settings)/sizeof(*settings));
+        }
         while (!LIST_EMPTY(&session_data.inuse_streams))
             stream_data_put(&session_data, LIST_FIRST(&session_data.inuse_streams));
         iou_close_fast(reactor, session_data.fd);
