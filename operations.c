@@ -481,6 +481,15 @@ iou_futex_waitv(reactor_t * reactor, struct futex_waitv *futexv, uint32_t nr_fut
 }
 
 int
+iou_futex_waitv_absolute(reactor_t * reactor, struct futex_waitv *futexv, uint32_t nr_futex, const struct timespec when) {
+    VALGRIND_CHECK_MEM_IS_DEFINED(futexv, nr_futex * sizeof *futexv);
+    reactor_reserve_sqes(reactor, 2);
+    struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    io_uring_prep_futex_waitv(sqe, futexv, nr_futex, 0);
+    return reactor_promise_impatient(reactor, sqe, when);
+}
+
+int
 iou_futex_wake32(reactor_t * reactor, uint32_t *futex, int n) {
     return iou_futex_wake32_bitset(reactor, futex, FUTEX_BITSET_MATCH_ANY, n);
 }
