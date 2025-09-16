@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 typedef struct reactor_s reactor_t;
+struct timespec;
 
 typedef uint32_t iou_semaphore_value_t;
 typedef struct iou_semaphore_s {
@@ -19,6 +20,7 @@ typedef struct iou_semaphore_s {
 
 void iou_semaphore(iou_semaphore_t *, const iou_semaphore_value_t);
 void iou_semaphore_wait(reactor_t *, iou_semaphore_t *);
+bool iou_semaphore_time(reactor_t *, iou_semaphore_t *, const struct timespec delta);
 void iou_semaphore_post(reactor_t *, iou_semaphore_t *);
 
 #ifdef __cplusplus

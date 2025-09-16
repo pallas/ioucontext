@@ -6,6 +6,7 @@
 #include "timespec.h"
 
 #include <assert.h>
+#include <linux/futex.h>
 
 void
 iou_semaphore(iou_semaphore_t * semaphore, const iou_semaphore_value_t value) {
@@ -29,6 +30,59 @@ iou_semaphore_wait(reactor_t * reactor, iou_semaphore_t * semaphore) {
         memory_order_acquire, memory_order_relaxed
         ));
     VALGRIND_HG_SEM_WAIT_POST(&semaphore->value);
+}
+
+bool
+iou_semaphore_time(reactor_t * reactor, iou_semaphore_t * semaphore, const struct timespec delta) {
+    const int epoch = timespec_when(delta);
+
+    if (epoch < 0) {
+        iou_semaphore_wait(reactor, semaphore);
+        return true;
+    }
+
+    const static iou_semaphore_value_t n = 1;
+    const struct timespec deadline = epoch > 0 ? reify_timespec(delta) : timespec_zero;
+    iou_semaphore_value_t value = atomic_load_explicit(&semaphore->value, memory_order_relaxed);
+
+    if (value < n && iou_yield(reactor))
+        value = atomic_load_explicit(&semaphore->value, memory_order_relaxed);
+
+    if (epoch == 0) {
+        if (value >= n && atomic_compare_exchange_strong_explicit(
+            &semaphore->value, &value, value - n,
+            memory_order_acquire, memory_order_relaxed
+            ))
+        {
+            VALGRIND_HG_SEM_WAIT_POST(&semaphore->value);
+            return true;
+        } else {
+            return false;
+        }
+    } else do {
+        if (value < n) {
+            do {
+                struct futex_waitv futexv = {
+                    .val = value,
+                    .uaddr = (uintptr_t)&semaphore->value,
+                    .flags = FUTEX_PRIVATE_FLAG | FUTEX2_SIZE_U32,
+                };
+                int result = iou_futex_waitv_absolute(reactor, &futexv, 1, deadline);
+                if (-ECANCELED == result) {
+                    assert(timespec_past(dereify_timespec(deadline)));
+                    return false;
+                }
+                value = atomic_load_explicit(&semaphore->value, memory_order_relaxed);
+            } while (value < n);
+        } else if (timespec_past(dereify_timespec(deadline))) {
+            return false;
+        }
+    } while (!atomic_compare_exchange_weak_explicit(
+        &semaphore->value, &value, value - n,
+        memory_order_acquire, memory_order_relaxed
+        ));
+    VALGRIND_HG_SEM_WAIT_POST(&semaphore->value);
+    return true;
 }
 
 void
