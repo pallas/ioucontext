@@ -19,6 +19,7 @@ extern "C" {
 #define HIDDEN __attribute__((visibility("hidden")))
 #endif//HIDDEN
 
+typedef struct bitset_s bitset_t;
 typedef struct reactor_stack_cache_s reactor_stack_cache_t;
 
 typedef struct reactor_s {
@@ -34,6 +35,7 @@ typedef struct reactor_s {
     unsigned long queue_depth;
     fiber_t *current;
     int urandomfd;
+    bitset_t * registered_file_bits;
 } reactor_t;
 
 HIDDEN void reactor_enter_core(reactor_t *);

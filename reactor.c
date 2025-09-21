@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include "reactor-internal.h"
 
+#include "bitset.h"
 #include "macros-internal.h"
 #include "stack.h"
 #include "todo_sigjmp.h"
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <sys/resource.h>
 
 static void make_reactor_key();
 static tss_t reactor_key;
@@ -19,6 +21,12 @@ static once_flag reactor_key_once_flag = ONCE_FLAG_INIT;
 static thread_local reactor_t reactor_local;
 
 enum { submit_threshold = 64 };
+
+static rlim_t
+getrlimit_nofile() {
+    struct rlimit rlimit;
+    return !getrlimit(RLIMIT_NOFILE, &rlimit) ? rlimit.rlim_cur : 0;
+}
 
 static void
 reactor_set(reactor_t * reactor) {
@@ -48,9 +56,20 @@ reactor_set(reactor_t * reactor) {
     if (reactor->queue_depth < submit_threshold)
         reactor->queue_depth = submit_threshold;
 
+    const char * env_registered_files = getenv("IOUCONTEXT_REGISTERED_FILES");
+    unsigned long n_registered_files = env_registered_files ? strtoul(env_registered_files, NULL, 0) : getrlimit_nofile();
+
     TRY(io_uring_queue_init_params, reactor->queue_depth, &reactor->ring, &params);
     TRY(io_uring_register_ring_fd, &reactor->ring);
     TRY(io_uring_ring_dontfork, &reactor->ring);
+
+    reactor->registered_file_bits = NULL;
+    if (n_registered_files > 0) {
+        reactor->registered_file_bits = bitset(n_registered_files);
+        if (UNLIKELY(!reactor->registered_file_bits))
+            abort();
+        TRY(io_uring_register_files_sparse, &reactor->ring, n_registered_files);
+    }
 
     if (params.features & IORING_FEAT_NO_IOWAIT)
         TRY(io_uring_set_iowait, &reactor->ring, false);
@@ -94,7 +113,10 @@ reactor_put(reactor_t * reactor) {
         close(reactor->urandomfd);
     if (reactor->cookie_eat)
         reactor->cookie_eat(reactor->cookie);
+    if (reactor->registered_file_bits)
+        free(reactor->registered_file_bits);
     io_uring_unregister_ring_fd(&reactor->ring);
+    io_uring_unregister_files(&reactor->ring);
     io_uring_queue_exit(&reactor->ring);
     stack_put(reactor->stack);
     while (reactor->stack_cache)
