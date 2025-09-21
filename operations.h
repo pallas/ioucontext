@@ -120,7 +120,7 @@ pid_t iou__spawn(reactor_t *, const posix_spawnattr_t *attrs, int to_fd, int fro
 pid_t iou_spawnv(reactor_t *, const posix_spawnattr_t *attrs, int to_fd, int from_fd, const char *command, va_list args);
 ssize_t iou_splice(reactor_t *, int fd_in, int fd_out, size_t len);
 ssize_t iou_splice_all(reactor_t *, int fd_in, int fd_out, size_t len);
-ssize_t iou_splice_offset(reactor_t *, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len);
+ssize_t iou_splice_offset(reactor_t *, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, int flags);
 int iou_statx(reactor_t *, const char *pathname, struct statx *statxbuf);
 int iou_statxat(reactor_t *, int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf);
 int iou_statxfd(reactor_t *, int fd, struct statx *statxbuf);

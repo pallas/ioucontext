@@ -1014,7 +1014,7 @@ iou_spawnv(reactor_t * reactor, const posix_spawnattr_t *attrs, int to_fd, int f
 
 ssize_t
 iou_splice(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
-    return iou_splice_offset(reactor, fd_in, NULL, fd_out, NULL, len);
+    return iou_splice_offset(reactor, fd_in, NULL, fd_out, NULL, len, SPLICE_F_MOVE);
 }
 
 ssize_t
@@ -1032,8 +1032,8 @@ iou_splice_all(reactor_t * reactor, int fd_in, int fd_out, size_t len) {
 }
 
 ssize_t
-iou_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len) {
-    int result = IOU(reactor, splice, fd_in, off_in ? *off_in : -1, fd_out, off_out ? *off_out : -1, len, SPLICE_F_MORE | SPLICE_F_MOVE);
+iou_splice_offset(reactor_t * reactor, int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, int flags) {
+    int result = IOU(reactor, splice, fd_in, off_in ? *off_in : -1, fd_out, off_out ? *off_out : -1, len, flags);
     if (result > 0) {
         if (off_in) *off_in += result;
         if (off_out) *off_out += result;
