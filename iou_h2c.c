@@ -5,10 +5,12 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <netinet/tcp.h>
 #include <nghttp2/nghttp2.h>
 #include <sched.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/poll.h>
 #include <sys/queue.h>
 #include <sys/signalfd.h>
 #include <sys/sysinfo.h>
@@ -26,15 +28,25 @@ typedef struct stream_data_s {
     int fd;
     int pipe_in;
     int pipe_out;
-    ssize_t pipe_bytes;
+    ssize_t pipe_bytes, pipe_max;
     stream_data_entry_t entry;
 } stream_data_t;
 
 typedef struct session_data_s {
     reactor_t *reactor;
     int fd;
+    int fd_sndbuf;
     stream_data_list_t free_streams;
     stream_data_list_t inuse_streams;
+    union {
+        uint8_t flags;
+        struct {
+            uint8_t want_read:1;
+            uint8_t need_poll_in:1;
+            uint8_t want_write:1;
+            uint8_t need_poll_out:1;
+        };
+    };
 } session_data_t;
 
 static stream_data_t *
@@ -79,7 +91,11 @@ iou_rand_callback(uint8_t *dest, size_t destlen) {
 static nghttp2_ssize
 iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
-    int result = iou_send(session_data->reactor, session_data->fd, data, length, MSG_DONTWAIT);
+    if (!session_data->want_read)
+        session_data->want_read = nghttp2_session_want_read(session);
+    int result = iou_send(session_data->reactor, session_data->fd, data, length, session_data->want_read ? MSG_DONTWAIT : 0);
+    if ((result == -EAGAIN || result == -EWOULDBLOCK || result == -EINTR) || (result > 0 && result < length))
+        session_data->need_poll_out = true;
     return (result == -EAGAIN || result == -EWOULDBLOCK || result == -EINTR) ? NGHTTP2_ERR_WOULDBLOCK
         : (result < 0) ? NGHTTP2_ERR_CALLBACK_FAILURE
         : result
@@ -89,7 +105,11 @@ iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length,
 static nghttp2_ssize
 iou_recv_callback2(nghttp2_session *session, uint8_t *buf, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
-    int result = iou_recv(session_data->reactor, session_data->fd, buf, length, MSG_DONTWAIT);
+    if (!session_data->want_write)
+        session_data->want_write = nghttp2_session_want_write(session);
+    int result = iou_recv(session_data->reactor, session_data->fd, buf, length, session_data->want_write ? MSG_DONTWAIT : 0);
+    if ((result == -EAGAIN || result == -EWOULDBLOCK || result == -EINTR) || (result > 0 && result < length))
+        session_data->need_poll_in = true;
     return (result == -EAGAIN || result == -EWOULDBLOCK || result == -EINTR) ? NGHTTP2_ERR_WOULDBLOCK
         : (result == 0 || result == -ECONNRESET) ? NGHTTP2_ERR_EOF
         : (result < 0) ? NGHTTP2_ERR_CALLBACK_FAILURE
@@ -109,10 +129,12 @@ iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *fra
 
     stream_data->fd = iou_open(session_data->reactor, words_file, O_RDONLY, O_CLOEXEC);
 
-    if (stream_data->fd >= 0)
+    if (stream_data->fd >= 0) {
         iou_fadvise(session_data->reactor, stream_data->fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
-    iou_pipe(session_data->reactor, &stream_data->pipe_out, &stream_data->pipe_in, O_CLOEXEC);
+        int result = iou_pipe(session_data->reactor, &stream_data->pipe_out, &stream_data->pipe_in, O_CLOEXEC | O_NONBLOCK);
+        stream_data->pipe_max = result < 0 ? -1 : fcntl(stream_data->pipe_in, F_GETPIPE_SZ);
+    }
 
     nghttp2_session_set_stream_user_data(session, frame->hd.stream_id, stream_data);
     return 0;
@@ -137,44 +159,81 @@ fd_read_callback(nghttp2_session *session, int32_t stream_id, uint8_t *buf, size
     session_data_t *session_data = (session_data_t *)user_data;
     stream_data_t *stream_data = (stream_data_t *)source->ptr;
 
-    static const size_t splice_ratio = 3;
-    static const size_t splice_threshold = 3<<12;
+    const ssize_t splice_threshold = 3<<12; /* 12kB */
 
-    if (stream_data->fd < 0) {
+    if (stream_data->fd < 0 && !stream_data->pipe_bytes)
         return NGHTTP2_ERR_CALLBACK_FAILURE;
-    } else if (stream_data->pipe_bytes >= length) {
-        *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
-        return length;
-    } else if (length >= splice_threshold && stream_data->pipe_in >= 0) {
-        const size_t splice_length = splice_ratio * (length < splice_threshold ? splice_threshold : length);
-        ssize_t n = iou_splice(session_data->reactor, stream_data->fd, stream_data->pipe_in, splice_length);
-        if (n < 0)
+
+    if (stream_data->fd >= 0 && stream_data->pipe_in >= 0 && stream_data->pipe_bytes < stream_data->pipe_max/2) {
+        ssize_t n = iou_splice_offset(session_data->reactor, stream_data->fd, NULL, stream_data->pipe_in, NULL, SSIZE_MAX, 0 | SPLICE_F_MOVE);
+        if (n > 0) {
+            stream_data->pipe_bytes += n;
+        } else if (n == 0) {
+            iou_close_fast(session_data->reactor, stream_data->fd);
+            stream_data->fd = -1;
+        } else if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR) {
+            if (!stream_data->pipe_bytes)
+                return NGHTTP2_ERR_PAUSE;
+        } else {
+            iou_close_fast(session_data->reactor, stream_data->pipe_in);
+            stream_data->pipe_in = -1;
+        }
+    }
+
+    if (stream_data->fd >= 0 && stream_data->pipe_in < 0 && !stream_data->pipe_bytes) {
+        ssize_t n = iou_read(session_data->reactor, stream_data->fd, buf, length);
+        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR)
+            return NGHTTP2_ERR_PAUSE;
+        else if (n <= 0)
             return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
 
-        stream_data->pipe_bytes += n;
-        if (!stream_data->pipe_bytes)
+        if (n < length)
             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
 
+        return n;
+    } else if (stream_data->pipe_bytes >= length && length >= splice_threshold) {
         *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
-        return stream_data->pipe_bytes < length ? stream_data->pipe_bytes : length;
-    } else if (stream_data->pipe_bytes > 0) {
+        return length;
+    } else if (stream_data->pipe_bytes >= length) {
         ssize_t n = iou_read(session_data->reactor, stream_data->pipe_out, buf, length);
-        if (n <= 0)
+        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR)
+            return NGHTTP2_ERR_PAUSE;
+        else if (n <= 0)
             return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
 
         stream_data->pipe_bytes -= n;
 
         return n;
-    } else {
-        ssize_t n = iou_read(session_data->reactor, stream_data->fd, buf, length);
-        if (n < 0)
+    } else if (stream_data->pipe_bytes >= stream_data->pipe_max/2) {
+        *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
+        if (stream_data->fd < 0)
+            *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+        return stream_data->pipe_bytes;
+    } else if (stream_data->fd >= 0) {
+        return NGHTTP2_ERR_PAUSE;
+    } else if (stream_data->pipe_bytes >= splice_threshold) {
+        *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
+        if (stream_data->fd < 0)
+            *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+        return stream_data->pipe_bytes;
+    } else if (stream_data->pipe_bytes) {
+        ssize_t n = iou_read(session_data->reactor, stream_data->pipe_out, buf, stream_data->pipe_bytes);
+        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR)
+            return NGHTTP2_ERR_PAUSE;
+        else if (n <= 0)
             return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
 
-        if (!n)
+        stream_data->pipe_bytes -= n;
+        if (stream_data->fd < 0 && !stream_data->pipe_bytes)
             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
 
         return n;
+    } else {
+        *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+        return 0;
     }
+
+    return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
 }
 
 static int
@@ -184,33 +243,46 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
 
     static const size_t framehd_len = 9;
 
-    if (stream_data->pipe_bytes < length) {
+    int siocoutq = iou_siocoutq(session_data->reactor, session_data->fd);
+    if (session_data->fd_sndbuf < siocoutq + framehd_len + length + frame->data.padlen)
+        session_data->fd_sndbuf = iou_getsockopt_int(session_data->reactor, session_data->fd, SOL_SOCKET, SO_SNDBUF);
+
+    if (session_data->fd_sndbuf < siocoutq + framehd_len + length + frame->data.padlen) {
+        session_data->need_poll_out = true;
+        return NGHTTP2_ERR_WOULDBLOCK;
+    } else if (stream_data->pipe_bytes < length) {
+        session_data->need_poll_out = true;
         return NGHTTP2_ERR_WOULDBLOCK;
     } else if (frame->data.padlen > 0) {
         uint8_t buffer[framehd_len+1];
         memcpy(buffer, framehd, framehd_len);
         buffer[framehd_len] = frame->data.padlen - 1;
-        ssize_t n = iou_send(session_data->reactor, session_data->fd, buffer, sizeof buffer, MSG_MORE | MSG_DONTWAIT);
-        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR)
+        ssize_t n = iou_send(session_data->reactor, session_data->fd, buffer, sizeof buffer, MSG_MORE);
+        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR) {
+            session_data->need_poll_out = true;
             return NGHTTP2_ERR_WOULDBLOCK;
+        }
         if (n != sizeof buffer)
             return NGHTTP2_ERR_CALLBACK_FAILURE;
     } else {
-        ssize_t n = iou_send(session_data->reactor, session_data->fd, framehd, framehd_len, MSG_MORE | MSG_DONTWAIT);
-        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR)
+        ssize_t n = iou_send(session_data->reactor, session_data->fd, framehd, framehd_len, MSG_MORE);
+        if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR) {
+            session_data->need_poll_out = true;
             return NGHTTP2_ERR_WOULDBLOCK;
+        }
         if (n != framehd_len)
             return NGHTTP2_ERR_CALLBACK_FAILURE;
     }
 
-    if (length != iou_splice(session_data->reactor, stream_data->pipe_out, session_data->fd, length))
+    ssize_t n = iou_splice_offset(session_data->reactor, stream_data->pipe_out, NULL, session_data->fd, NULL, length, SPLICE_F_MOVE | (frame->data.padlen > 1 ? SPLICE_F_MORE : 0));
+    if (length != n)
         return NGHTTP2_ERR_CALLBACK_FAILURE;
 
     stream_data->pipe_bytes -= length;
 
     if (frame->data.padlen > 1) {
         static const uint8_t pad[255] = {0};
-        if (frame->data.padlen - 1 != iou_send(session_data->reactor, session_data->fd, pad, frame->data.padlen - 1, 0))
+        if (frame->data.padlen - 1 != iou_send(session_data->reactor, session_data->fd, pad, frame->data.padlen - 1, stream_data->pipe_bytes ? MSG_MORE : 0))
             return NGHTTP2_ERR_CALLBACK_FAILURE;
     }
 
@@ -281,20 +353,68 @@ iou_error_callback2(nghttp2_session *session, int lib_error_code, const char *ms
     return 0;
 }
 
+static int
+session_io(nghttp2_session *session, session_data_t * session_data) {
+    int result;
+    session_data->want_read = nghttp2_session_want_read(session);
+    session_data->want_write = nghttp2_session_want_write(session);
+    while (session_data->want_read || session_data->want_write) {
+        if (session_data->want_read && !session_data->need_poll_in) {
+            /* fastpath */
+        } else if (session_data->want_write && !session_data->need_poll_out) {
+            /* fastpath */
+        } else if (session_data->need_poll_in || session_data->need_poll_out) {
+            assert(!session_data->want_read || session_data->need_poll_in);
+            assert(!session_data->want_write || session_data->need_poll_out);
+
+            static const unsigned in_mask = POLLIN | POLLPRI | POLLRDHUP | POLLHUP;
+            static const unsigned out_mask = POLLOUT | POLLHUP;
+            const unsigned mask = POLLERR
+                | (session_data->need_poll_in ? in_mask : 0)
+                | (session_data->need_poll_out ? out_mask : 0)
+                ;
+            unsigned events = iou_poll(session_data->reactor, session_data->fd, mask, timespec_block);
+
+            if (events & (POLLERR))
+                return NGHTTP2_ERR_SESSION_CLOSING;
+
+            if (events & (POLLIN | POLLPRI | POLLRDHUP | POLLHUP))
+                session_data->need_poll_in = false;
+
+            if (events & (POLLOUT | POLLHUP))
+                session_data->need_poll_out = false;
+        }
+
+        if (session_data->want_read && !session_data->need_poll_in) {
+            if ((result = nghttp2_session_recv(session)))
+                return result;
+
+            session_data->want_read = nghttp2_session_want_read(session);
+            if (!session_data->want_write)
+                session_data->want_write = nghttp2_session_want_write(session);
+        }
+
+        if (session_data->want_write && !session_data->need_poll_out) {
+            if ((result = nghttp2_session_send(session)))
+                return result;
+
+            session_data->want_read = nghttp2_session_want_read(session);
+            session_data->want_write = nghttp2_session_want_write(session);
+        }
+    }
+
+    return 0;
+}
+
 void
 process(reactor_t * reactor, session_data_t * session_data, nghttp2_settings_entry * settings, size_t settings_n) {
     nghttp2_session *session = NULL;
     nghttp2_session_server_new3(&session, callbacks, session_data, NULL, NULL);
     iou_printf(reactor, STDERR_FILENO, "%p session begin\n", session);
 
-    int result;
-    if (!(result = nghttp2_submit_settings(session, NGHTTP2_FLAG_NONE, settings, settings_n)))
-    while (nghttp2_session_want_read(session) || nghttp2_session_want_write(session)) {
-        if (nghttp2_session_want_read(session) && (result = nghttp2_session_recv(session))) break;
-        if (nghttp2_session_want_write(session) && (result = nghttp2_session_send(session))) break;
-    }
-
-    while (nghttp2_session_want_write(session) && !(result = nghttp2_session_send(session))) { }
+    int result = nghttp2_submit_settings(session, NGHTTP2_FLAG_NONE, settings, settings_n);
+    if (!result)
+        result = session_io(session, session_data);
 
     iou_printf(reactor, STDERR_FILENO, "%p session end %s\n", session, nghttp2_strerror(result));
     nghttp2_session_del(session);
@@ -319,6 +439,7 @@ fiber(reactor_t * reactor, int accept_fd) {
     };
 
     while ((session_data.fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_CLOEXEC)) >= 0) {
+
         const struct timespec when = reify_timespec(timespec_ms(5));
         if (iou_yield(reactor) && timespec_past(dereify_timespec(when))) {
             const static struct linger linger_zero = { .l_onoff = 1, .l_linger = 0, };
@@ -326,6 +447,9 @@ fiber(reactor_t * reactor, int accept_fd) {
         } else {
             process(reactor, &session_data, settings, sizeof(settings)/sizeof(*settings));
         }
+        session_data.flags = 0;
+        session_data.fd_sndbuf = 0;
+
         while (!LIST_EMPTY(&session_data.inuse_streams))
             stream_data_put(&session_data, LIST_FIRST(&session_data.inuse_streams));
         iou_close_fast(reactor, session_data.fd);
