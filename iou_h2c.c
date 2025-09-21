@@ -107,7 +107,7 @@ iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *fra
         return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
     }
 
-    stream_data->fd = iou_open(session_data->reactor, words_file, O_RDONLY, 0);
+    stream_data->fd = iou_open(session_data->reactor, words_file, O_RDONLY, O_CLOEXEC);
 
     if (stream_data->fd >= 0)
         iou_fadvise(session_data->reactor, stream_data->fd, 0, 0, POSIX_FADV_SEQUENTIAL);
