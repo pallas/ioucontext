@@ -29,7 +29,6 @@ typedef struct reactor_s {
     unsigned reserved;
     long int queue_depth;
     fiber_t *current;
-    struct jump_chain_s *pivot;
     int urandomfd;
 } reactor_t;
 

@@ -61,7 +61,6 @@ reactor_set(reactor_t * reactor) {
     reactor->cookie_eat = NULL;
     reactor->sqes = reactor->tare = reactor->cqes = reactor->reserved = 0;
     reactor->current = NULL;
-    reactor->pivot = NULL;
     reactor->urandomfd = -1;
 
     if (fd < 0)
@@ -99,14 +98,6 @@ reactor_put(reactor_t * reactor) {
     stack_put(reactor->stack);
     while (reactor->stack_cache)
         stack_put(reactor_stack_get(reactor));
-}
-
-static struct jump_chain_s * const pivoting = (struct jump_chain_s *)~(uintptr_t)0;
-
-void
-reactor__reactor_synchronize(reactor_t * reactor) {
-    assert(!reactor->pivot);
-    reactor->pivot = pivoting;
 }
 
 void *
@@ -161,9 +152,6 @@ reactor_flush(reactor_t * reactor) {
             if (cqe->flags & IORING_CQE_F_MORE) {
                 ++reactor->sqes;
                 ++reactor->tare;
-            } else if (reactor->pivot == todo) {
-                reactor->pivot = NULL;
-                jump_queue_requeue(&reactor->todos, todo);
             } else {
                 jump_queue_enqueue(&reactor->todos, todo);
             }
@@ -180,7 +168,6 @@ reactor_flush(reactor_t * reactor) {
 static unsigned
 reactor_cqes(reactor_t * reactor) {
     assert(reactor);
-    assert(!reactor->pivot);
 
     if (jump_queue_empty(&reactor->todos)) {
         reactor->tare = reactor->sqes;
@@ -201,12 +188,6 @@ reactor_cqes(reactor_t * reactor) {
 void
 reactor_enter_core(reactor_t * reactor) {
     while (reactor_runnable(reactor)) {
-
-        while (reactor->pivot) {
-            reactor->tare = reactor->sqes;
-            TRY(io_uring_submit_and_get_events, &reactor->ring);
-            reactor_flush(reactor);
-        }
 
         if (reactor->tare != reactor->sqes) {
             reactor->tare = reactor->sqes;
@@ -238,10 +219,6 @@ int
 reactor_promise(reactor_t * reactor, struct io_uring_sqe * sqe) {
     todo_sigjmp_t todo;
     io_uring_sqe_set_data(sqe, (void*)&todo.jump);
-
-    if (reactor->pivot == pivoting)
-        reactor->pivot = &todo.jump;
-
     reactor_sigjmp_core(reactor, &todo);
     return todo.jump.result;
 }
@@ -261,9 +238,6 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
         | IORING_TIMEOUT_BOOTTIME
         );
     io_uring_sqe_set_data(sqe, NULL);
-
-    if (reactor->pivot == pivoting)
-        reactor->pivot = &todo.jump;
 
     reactor_sigjmp_core(reactor, &todo);
     return todo.jump.result;
@@ -290,9 +264,6 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
         );
     io_uring_sqe_set_data(sqe, NULL);
 
-    if (reactor->pivot == pivoting)
-        reactor->pivot = &todo.jump;
-
     reactor_sigjmp_core(reactor, &todo);
     return todo.jump.result;
 }
@@ -300,8 +271,6 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
 void
 reactor_future_fake(reactor_t * reactor, struct io_uring_sqe * sqe) {
     io_uring_sqe_set_data(sqe, NULL);
-    if (reactor->pivot == pivoting)
-        reactor->pivot = NULL;
 }
 
 void
@@ -353,25 +322,18 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
     if (UNLIKELY(reactor->queue_depth < n))
         abort();
 
-    if (reactor->pivot) {
-        while (reactor_will_block(reactor, n)) {
-            reactor_flush(reactor);
+    if (!jump_queue_empty(&reactor->todos) || io_uring_cq_has_overflow(&reactor->ring))
+        reactor_defer(reactor);
+
+    while (reactor_will_block(reactor, n)) {
+        if (io_uring_cq_ready(&reactor->ring))
+            reactor_refer(reactor);
+
+        reactor->tare = reactor->sqes;
+        TRY(io_uring_submit_and_get_events, &reactor->ring);
+
+        if (!io_uring_cq_ready(&reactor->ring))
             TRY(io_uring_sqring_wait, &reactor->ring);
-        }
-    } else {
-        if (!jump_queue_empty(&reactor->todos) || io_uring_cq_has_overflow(&reactor->ring))
-            reactor_defer(reactor);
-
-        while (reactor_will_block(reactor, n)) {
-            if (io_uring_cq_ready(&reactor->ring))
-                reactor_refer(reactor);
-
-            reactor->tare = reactor->sqes;
-            TRY(io_uring_submit_and_get_events, &reactor->ring);
-
-            if (!io_uring_cq_ready(&reactor->ring))
-                TRY(io_uring_sqring_wait, &reactor->ring);
-        }
     }
 
     assert(io_uring_sq_space_left(&reactor->ring) >= n);

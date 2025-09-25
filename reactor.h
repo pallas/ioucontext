@@ -19,12 +19,6 @@ bool reactor_runnable(const reactor_t *);
 bool reactor_running(const reactor_t *);
 uintptr_t reactor_current(const reactor_t *);
 
-void reactor__reactor_synchronize(reactor_t *);
-static inline reactor_t * reactor_synchronize(reactor_t * reactor) {
-    reactor__reactor_synchronize(reactor);
-    return reactor;
-}
-
 void reactor_park(reactor_t *, jump_chain_t **);
 void reactor_schedule(reactor_t *, jump_chain_t *);
 

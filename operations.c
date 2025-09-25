@@ -1210,7 +1210,7 @@ iou_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
 
 bool
 iou_yield(reactor_t * reactor) {
-    if (!reactor->pivot && !reactor_runnable(reactor))
+    if (!reactor_runnable(reactor))
         return false;
 
     IOU(reactor, nop);
