@@ -639,6 +639,12 @@ iou_poll_mask(reactor_t * reactor, int fd, unsigned mask, const struct timespec 
     return result;
 }
 
+unsigned
+iou_poll_any(reactor_t * reactor, int fd, const struct timespec delta) {
+    static const unsigned mask = POLLERR | POLLHUP | POLLIN | POLLOUT | POLLPRI | POLLRDHUP;
+    return iou_poll_mask(reactor, fd, mask, delta);
+}
+
 bool
 iou_poll_hup(reactor_t * reactor, int fd, const struct timespec delta) {
     static const unsigned mask = POLLHUP | POLLRDHUP;
