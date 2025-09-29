@@ -179,12 +179,7 @@ reactor_cqes(reactor_t * reactor) {
         io_uring_submit(&reactor->ring);
     }
 
-    unsigned delta = reactor_flush(reactor);
-
-    if (!jump_queue_empty(&reactor->todos))
-        jump_invoke(jump_queue_dequeue(&reactor->todos), reactor);
-
-    return delta;
+    return reactor_flush(reactor);
 }
 
 void
