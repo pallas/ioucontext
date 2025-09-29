@@ -165,6 +165,8 @@ reactor_flush(reactor_t * reactor) {
     return delta;
 }
 
+static const unsigned submit_threshold = 16;
+
 static unsigned
 reactor_cqes(reactor_t * reactor) {
     assert(reactor);
@@ -172,7 +174,7 @@ reactor_cqes(reactor_t * reactor) {
     if (jump_queue_empty(&reactor->todos)) {
         reactor->tare = reactor->sqes;
         io_uring_submit_and_wait(&reactor->ring, 1);
-    } else if (reactor->tare != reactor->sqes) {
+    } else if (reactor->sqes - reactor->tare >= submit_threshold) {
         reactor->tare = reactor->sqes;
         io_uring_submit(&reactor->ring);
     }
@@ -189,7 +191,7 @@ void
 reactor_enter_core(reactor_t * reactor) {
     while (reactor_runnable(reactor)) {
 
-        if (reactor->tare != reactor->sqes) {
+        if (reactor->sqes - reactor->tare >= submit_threshold) {
             reactor->tare = reactor->sqes;
             io_uring_submit(&reactor->ring);
         }
@@ -199,6 +201,10 @@ reactor_enter_core(reactor_t * reactor) {
 
         if (reactor_inflight(reactor))
             reactor_cqes(reactor);
+        else if (reactor->tare != reactor->sqes) {
+            reactor->tare = reactor->sqes;
+            io_uring_submit(&reactor->ring);
+        }
     }
 
     if (reactor->runner) {
