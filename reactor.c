@@ -356,7 +356,7 @@ reactor_sqe(reactor_t * reactor) {
     assert(reactor);
     ++reactor->sqes;
 
-    if (!reactor->reserved)
+    if (reactor_will_block(reactor, 1))
         reactor_reserve_sqes(reactor, 1);
 
     --reactor->reserved;
