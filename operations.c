@@ -45,7 +45,7 @@
     const struct timespec _delta = delta; \
     IOU_DELTA_EQUAL(_delta, timespec_block) ? -1 : \
     IOU_DELTA_EQUAL(_delta, timespec_zero) ? 0 : \
-    timespec_when(_delta); \
+    timespec_when(normalize_timespec(_delta)); \
 })
 
 #define IOU_DELTA(reactor, delta, operation, ...) ({ \
