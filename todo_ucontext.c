@@ -14,7 +14,6 @@ ucontext_done(jump_argument argument) {
 
 struct ucontext_t *
 make_todo_ucontext(todo_ucontext_t * todo, fiber_t * fiber) {
-    explicit_bzero(&todo->uc, sizeof todo->uc);
     TRY(getcontext, &todo->uc);
     todo->jump = (jump_chain_t) {
         .function = ucontext_done,

@@ -413,7 +413,6 @@ main(int argc, char *argv[]) {
 
     int signal_fd = TRY(signalfd, -1, &mask, 0);
     struct signalfd_siginfo si;
-    explicit_bzero(&si, sizeof si);
     do {
         if (TRY(iou_read, reactor, signal_fd, &si, sizeof si) < sizeof si)
             abort();

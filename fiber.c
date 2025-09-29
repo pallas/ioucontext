@@ -45,7 +45,6 @@ fiber_get(reactor_t *reactor) {
 
     fiber->full_stack = full_stack;
 
-    explicit_bzero(&fiber->bounce, sizeof fiber->bounce);
     TRY(getcontext, &fiber->bounce);
     fiber->bounce.uc_stack = stack_split(&main_stack, sizeof(fiber) + 2 * sizeof(uintptr_t), 16);
     fiber->bounce.uc_link = NULL;

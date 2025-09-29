@@ -45,7 +45,6 @@ signal_handler(reactor_t * reactor, sigset_t *mask) {
     int sfd = TRY(signalfd, -1, mask, 0);
 
     struct signalfd_siginfo si;
-    explicit_bzero(&si, sizeof si);
     do {
         if (TRY(iou_read, reactor, sfd, &si, sizeof si) < sizeof si)
             abort();
