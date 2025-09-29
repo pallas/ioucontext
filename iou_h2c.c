@@ -219,10 +219,12 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
 
 #define NV(NAME, VALUE) (nghttp2_nv){ \
     .name = (uint8_t *)(NAME), \
-    .namelen = strlen(NAME), \
+    .namelen = (__builtin_constant_p(NAME) ? (sizeof(NAME) - 1) : strlen(NAME)), \
     .value = (uint8_t *)(VALUE), \
-    .valuelen = strlen(VALUE), \
-    .flags = NGHTTP2_NV_FLAG_NONE, \
+    .valuelen = (__builtin_constant_p(VALUE) ? (sizeof(VALUE) - 1) : strlen(VALUE)), \
+    .flags = NGHTTP2_NV_FLAG_NONE \
+        | (__builtin_constant_p(NAME) ? NGHTTP2_NV_FLAG_NO_COPY_NAME : NGHTTP2_NV_FLAG_NONE) \
+        | (__builtin_constant_p(VALUE) ? NGHTTP2_NV_FLAG_NO_COPY_VALUE : NGHTTP2_NV_FLAG_NONE) \
 }
 
 static int
