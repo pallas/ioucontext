@@ -3,6 +3,7 @@
 #define IOUCONTEXT_MACROS_INTERNAL_H
 
 #include "macros.h"
+#include <stdbool.h>
 
 #ifdef HAVE_MEMCHECK_H
 #include <valgrind/memcheck.h>
