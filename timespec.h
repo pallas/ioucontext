@@ -26,7 +26,6 @@ int timespec_when(const struct timespec);
 bool timespec_past(const struct timespec);
 bool timespec_present(const struct timespec);
 bool timespec_future(const struct timespec);
-bool timespec_normalized(const struct timespec);
 
 #ifdef __cplusplus
 }
