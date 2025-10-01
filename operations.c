@@ -19,12 +19,17 @@
 #include <sys/wait.h>
 #include <ucontext.h>
 
-#define IOU(reactor, operation, ...) ({ \
+#define IOU_FLAGS(flags, reactor, operation, ...) ({ \
     reactor_t * _reactor = (reactor); \
     assert(_reactor); \
     struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
     io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
+    io_uring_sqe_set_flags(sqe, flags); \
     reactor_promise(_reactor, sqe); \
+})
+
+#define IOU(reactor, operation, ...) ({ \
+    IOU_FLAGS(0, reactor, operation __VA_OPT__(,) __VA_ARGS__); \
 })
 
 #define IOU_FAKE(reactor, operation, ...) do { \
@@ -32,6 +37,7 @@
     assert(_reactor); \
     struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
     io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
+    io_uring_sqe_set_flags(sqe, 0); \
     reactor_future_fake(_reactor, sqe); \
 } while (false);
 
@@ -57,12 +63,14 @@
     case -1: { \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
+        io_uring_sqe_set_flags(sqe, 0); \
         result = reactor_promise(_reactor, sqe); \
         } break; \
     case 0: { \
         reactor_reserve_sqes(reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
+        io_uring_sqe_set_flags(sqe, 0); \
         result = reactor_promise_nonchalant(_reactor, sqe); \
         } break; \
     case 1: { \
@@ -70,6 +78,7 @@
         reactor_reserve_sqes(reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
+        io_uring_sqe_set_flags(sqe, 0); \
         result = reactor_promise_impatient(_reactor, sqe, when); \
         } break; \
     default: abort(); \
@@ -318,6 +327,7 @@ iou_fdatasync_range(reactor_t * reactor, int fd, off_t start, off_t length) {
     assert(reactor);
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fsync(sqe, fd, IORING_FSYNC_DATASYNC);
+    io_uring_sqe_set_flags(sqe, 0);
     sqe->off = start;
     sqe->len = length;
     return reactor_promise(reactor, sqe);
@@ -439,12 +449,7 @@ iou_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t
 
 void
 iou_flush(reactor_t * reactor) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_nop(sqe);
-    io_uring_sqe_set_flags(sqe, IOSQE_IO_DRAIN);
-    reactor_promise(reactor, sqe);
+    IOU_FLAGS(IOSQE_IO_DRAIN, reactor, nop);
 }
 
 int
@@ -465,6 +470,7 @@ iou_fsync_range(reactor_t * reactor, int fd, off_t start, off_t length) {
     assert(reactor);
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_fsync(sqe, fd, 0);
+    io_uring_sqe_set_flags(sqe, 0);
     sqe->off = start;
     sqe->len = length;
     return reactor_promise(reactor, sqe);
@@ -499,6 +505,7 @@ iou_futex_waitv_absolute(reactor_t * reactor, struct futex_waitv *futexv, uint32
     reactor_reserve_sqes(reactor, 2);
     struct io_uring_sqe * sqe = reactor_sqe(reactor);
     io_uring_prep_futex_waitv(sqe, futexv, nr_futex, 0);
+    io_uring_sqe_set_flags(sqe, 0);
     return reactor_promise_impatient(reactor, sqe, when);
 }
 

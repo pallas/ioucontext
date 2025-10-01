@@ -230,7 +230,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
     todo_sigjmp_t todo;
     io_uring_sqe_set_data(sqe, (void*)&todo.jump);
-    io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
+    sqe->flags |= IOSQE_IO_LINK;
 
     struct __kernel_timespec kts = { .tv_nsec = 32767 };
 
@@ -238,6 +238,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
     io_uring_prep_link_timeout(sqe, &kts, 0
         | IORING_TIMEOUT_BOOTTIME
         );
+    io_uring_sqe_set_flags(sqe, 0);
     io_uring_sqe_set_data(sqe, NULL);
 
     reactor_sigjmp_core(reactor, &todo);
@@ -250,7 +251,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
 
     todo_sigjmp_t todo;
     io_uring_sqe_set_data(sqe, (void*)&todo.jump);
-    io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
+    sqe->flags |= IOSQE_IO_LINK;
 
     when = normalize_timespec(when);
     struct __kernel_timespec kts = {
@@ -263,6 +264,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
         | IORING_TIMEOUT_ABS
         | IORING_TIMEOUT_BOOTTIME
         );
+    io_uring_sqe_set_flags(sqe, 0);
     io_uring_sqe_set_data(sqe, NULL);
 
     reactor_sigjmp_core(reactor, &todo);
@@ -290,6 +292,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     if (!reactor_will_block(reactor, 1)) {
         struct io_uring_sqe * sqe = reactor_sqe(reactor);
         io_uring_prep_nop(sqe);
+        io_uring_sqe_set_flags(sqe, 0);
         io_uring_sqe_set_data(sqe, (void*)todo);
     } else {
         jump_queue_enqueue(&reactor->todos, todo);
