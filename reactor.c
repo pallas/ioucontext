@@ -47,7 +47,7 @@ reactor_set(reactor_t * reactor) {
     }
 
     const char * env_queue_depth = getenv("IOUCONTEXT_QUEUE_DEPTH");
-    reactor->queue_depth = env_queue_depth ? strtol(env_queue_depth, NULL, 0) : 1024;
+    reactor->queue_depth = env_queue_depth ? strtoul(env_queue_depth, NULL, 0) : 1024;
 
     TRY(io_uring_queue_init_params, reactor->queue_depth, &reactor->ring, &params);
     TRY(io_uring_register_ring_fd, &reactor->ring);

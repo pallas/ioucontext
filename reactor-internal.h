@@ -27,7 +27,7 @@ typedef struct reactor_s {
     reactor_cookie_eat_t cookie_eat;
     unsigned sqes, tare, cqes;
     unsigned reserved;
-    long int queue_depth;
+    unsigned long queue_depth;
     fiber_t *current;
     int urandomfd;
 } reactor_t;
