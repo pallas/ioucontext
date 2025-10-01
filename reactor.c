@@ -53,6 +53,9 @@ reactor_set(reactor_t * reactor) {
     TRY(io_uring_register_ring_fd, &reactor->ring);
     TRY(io_uring_ring_dontfork, &reactor->ring);
 
+    if (params.features & IORING_FEAT_NO_IOWAIT)
+        TRY(io_uring_set_iowait, &reactor->ring, false);
+
     jump_queue_reset(&reactor->todos);
     reactor->runner = NULL;
     reactor->stack = stack_dofork(stack_get_signal());
