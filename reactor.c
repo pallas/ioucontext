@@ -24,6 +24,7 @@ reactor_set(reactor_t * reactor) {
     params.flags |= IORING_SETUP_SQPOLL;
     params.flags |= IORING_SETUP_SUBMIT_ALL;
     params.flags |= IORING_SETUP_SINGLE_ISSUER;
+    params.flags |= IORING_SETUP_NO_SQARRAY;
 
     params.sq_thread_idle = 100;
 
