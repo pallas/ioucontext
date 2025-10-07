@@ -19,7 +19,7 @@
 #include <sys/wait.h>
 #include <ucontext.h>
 
-#define IOU_FLAGS(flags, reactor, operation, ...) ({ \
+#define IOU_FLAGS(reactor, flags, operation, ...) ({ \
     reactor_t * _reactor = (reactor); \
     assert(_reactor); \
     struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
@@ -29,17 +29,20 @@
 })
 
 #define IOU(reactor, operation, ...) ({ \
-    IOU_FLAGS(0, reactor, operation __VA_OPT__(,) __VA_ARGS__); \
+    IOU_FLAGS(reactor, 0, operation __VA_OPT__(,) __VA_ARGS__); \
 })
 
-#define IOU_FAKE(reactor, operation, ...) do { \
+#define IOU_FAKE_FLAGS(reactor, flags, operation, ...) do { \
     reactor_t * _reactor = (reactor); \
     assert(_reactor); \
     struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
     io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
     io_uring_sqe_set_flags(sqe, 0); \
     reactor_future_fake(_reactor, sqe); \
-} while (false);
+} while (false)
+
+#define IOU_FAKE(reactor, operation, ...) \
+    IOU_FAKE_FLAGS(reactor, 0, operation __VA_OPT__(,) __VA_ARGS__)
 
 #define IOU_DELTA_EQUAL(l,r) ({ \
     const struct timespec _l = l; \
@@ -54,7 +57,7 @@
     timespec_when(normalize_timespec(_delta)); \
 })
 
-#define IOU_DELTA(reactor, delta, operation, ...) ({ \
+#define IOU_DELTA_FLAGS(reactor, delta, flags, operation, ...) ({ \
     reactor_t * _reactor = (reactor); \
     assert(_reactor); \
     const struct timespec _delta = delta; \
@@ -63,14 +66,14 @@
     case -1: { \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
-        io_uring_sqe_set_flags(sqe, 0); \
+        io_uring_sqe_set_flags(sqe, flags); \
         result = reactor_promise(_reactor, sqe); \
         } break; \
     case 0: { \
         reactor_reserve_sqes(reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
-        io_uring_sqe_set_flags(sqe, 0); \
+        io_uring_sqe_set_flags(sqe, flags); \
         result = reactor_promise_nonchalant(_reactor, sqe); \
         } break; \
     case 1: { \
@@ -78,12 +81,16 @@
         reactor_reserve_sqes(reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
-        io_uring_sqe_set_flags(sqe, 0); \
+        io_uring_sqe_set_flags(sqe, flags); \
         result = reactor_promise_impatient(_reactor, sqe, when); \
         } break; \
     default: abort(); \
     } \
     result; \
+})
+
+#define IOU_DELTA(reactor, delta, operation, ...) ({ \
+    IOU_DELTA_FLAGS(reactor, delta, 0, operation __VA_OPT__(,) __VA_ARGS__); \
 })
 
 int
@@ -449,7 +456,7 @@ iou_fgetxattr(reactor_t * reactor, int fd, const char *name, void *value, size_t
 
 void
 iou_flush(reactor_t * reactor) {
-    IOU_FLAGS(IOSQE_IO_DRAIN, reactor, nop);
+    IOU_FLAGS(reactor, IOSQE_IO_DRAIN, nop);
 }
 
 int
