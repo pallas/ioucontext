@@ -37,7 +37,7 @@
     assert(_reactor); \
     struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
     io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
-    io_uring_sqe_set_flags(sqe, 0); \
+    io_uring_sqe_set_flags(sqe, flags); \
     reactor_future_fake(_reactor, sqe); \
 } while (false)
 
