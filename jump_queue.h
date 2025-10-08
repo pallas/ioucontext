@@ -26,8 +26,8 @@ typedef struct jump_chain_s {
     volatile jump_result_t result;
 } jump_chain_t;
 
-void jump_invoke(jump_chain_t *, reactor_t *);
-jump_result_t jump_result(const jump_chain_t *);
+HIDDEN void jump_invoke(jump_chain_t *, reactor_t *);
+HIDDEN jump_result_t jump_result(const jump_chain_t *);
 
 typedef struct jump_queue_s {
     jump_chain_t * head;
