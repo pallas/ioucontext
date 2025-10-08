@@ -144,29 +144,32 @@ static unsigned
 reactor_flush(reactor_t * reactor) {
     unsigned base = reactor->cqes;
 
-    unsigned head;
-    struct io_uring_cqe * cqe;
-    io_uring_for_each_cqe(&reactor->ring, head, cqe) {
-        ++reactor->cqes;
-        jump_chain_t * todo;
-        if (todo = (jump_chain_t*)io_uring_cqe_get_data(cqe)) {
-            if (!(cqe->flags & IORING_CQE_F_NOTIF) || cqe->res < 0)
-                todo->result = cqe->res;
+    static const size_t n_cqes = 64;
+    struct io_uring_cqe *cqes[n_cqes];
+    unsigned n;
+    do {
+        if ((n = io_uring_peek_batch_cqe(&reactor->ring, cqes, n_cqes))) {
+            reactor->cqes += n;
+            for (unsigned i = 0 ; i < n ; ++i) {
+                jump_chain_t * todo = (jump_chain_t*)io_uring_cqe_get_data(cqes[i]);
+                if (!todo)
+                    continue;
 
-            if (cqe->flags & IORING_CQE_F_MORE) {
-                ++reactor->sqes;
-                ++reactor->tare;
-            } else {
-                jump_queue_enqueue(&reactor->todos, todo);
+                if (!(cqes[i]->flags & IORING_CQE_F_NOTIF) || cqes[i]->res < 0)
+                    todo->result = cqes[i]->res;
+
+                if (cqes[i]->flags & IORING_CQE_F_MORE) {
+                    ++reactor->sqes;
+                    ++reactor->tare;
+                } else {
+                    jump_queue_enqueue(&reactor->todos, todo);
+                }
             }
+            io_uring_cq_advance(&reactor->ring, n);
         }
-    }
+    } while (n == n_cqes);
 
-    unsigned delta = reactor->cqes - base;
-    if (delta > 0)
-        io_uring_cq_advance(&reactor->ring, delta);
-
-    return delta;
+    return reactor->cqes - base;
 }
 
 static const unsigned submit_threshold = 16;
