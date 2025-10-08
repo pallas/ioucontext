@@ -210,8 +210,12 @@ reactor__enter_core(reactor_t * reactor) {
             io_uring_submit(&reactor->ring);
         }
 
-        while (!jump_queue_empty(&reactor->todos) && !reactor__will_block(reactor, 1))
-            jump_invoke(jump_queue_dequeue(&reactor->todos), reactor);
+        while (!jump_queue_empty(&reactor->todos) && !reactor__will_block(reactor, 1)) {
+            jump_chain_t * todo = jump_queue_dequeue(&reactor->todos);
+            if (todo->fiber == reactor->current)
+                return;
+            jump_invoke(todo, reactor);
+        }
 
         if (reactor__inflight(reactor))
             reactor_cqes(reactor);
@@ -225,6 +229,8 @@ reactor__enter_core(reactor_t * reactor) {
         reactor->current = NULL;
         siglongjmp(*reactor->runner, true);
     }
+
+    abort();
 }
 
 void
@@ -234,10 +240,10 @@ reactor_enter_core(reactor_t * reactor) {
 
 static __attribute__((noipa)) void
 reactor_sigjmp_core(reactor_t * reactor, todo_sigjmp_t * todo) {
-    if (!sigsetjmp(*make_todo_sigjmp(todo, reactor->current), false)) {
+    if (!sigsetjmp(*make_todo_sigjmp(todo, reactor->current), false))
         reactor__enter_core(reactor);
-        abort();
-    }
+
+    assert(todo->jump.fiber == reactor->current);
 }
 
 static struct io_uring_sqe *
@@ -341,8 +347,8 @@ reactor_defer(reactor_t * reactor) {
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         jump_queue_enqueue(&reactor->todos, &todo.jump);
         reactor__enter_core(reactor);
-        abort();
     }
+    assert(todo.jump.fiber == reactor->current);
 }
 
 static __attribute__((noipa)) void
@@ -351,8 +357,8 @@ reactor_refer(reactor_t * reactor) {
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         jump_queue_requeue(&reactor->todos, &todo.jump);
         reactor__enter_core(reactor);
-        abort();
     }
+    assert(todo.jump.fiber == reactor->current);
 }
 
 static void

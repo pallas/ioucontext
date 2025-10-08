@@ -17,7 +17,6 @@ typedef struct fiber_s {
 
 static void
 fiber_put(fiber_t *fiber, reactor_t *reactor) {
-    reactor->current = NULL;
     reactor_stack_put(reactor, fiber->full_stack);
     reactor_enter_core(reactor);
     abort();
