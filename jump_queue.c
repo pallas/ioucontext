@@ -5,12 +5,14 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 void
 jump_invoke(jump_chain_t * jc, reactor_t * reactor) {
     assert(jc->function);
     reactor->current = jc->fiber;
     jc->function(jc);
+    abort();
 }
 
 jump_result_t
