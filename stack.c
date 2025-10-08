@@ -129,7 +129,7 @@ stack_put(stack_t s) {
     TRY(munmap, s.ss_sp - page_size, s.ss_size + 2*page_size);
 }
 
-rlim_t
+static rlim_t
 rlimit_stack() {
     struct rlimit rl;
     TRY(getrlimit, RLIMIT_STACK, &rl);
