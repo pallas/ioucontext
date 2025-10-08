@@ -44,8 +44,6 @@ HIDDEN void reactor_future_fake(reactor_t *, struct io_uring_sqe *);
 
 HIDDEN struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
 HIDDEN void reactor_reserve_sqes(reactor_t *, size_t);
-HIDDEN bool reactor_will_block(reactor_t *, size_t);
-HIDDEN unsigned reactor_inflight(const reactor_t *);
 
 HIDDEN bool reactor_stack_has(reactor_t *);
 HIDDEN stack_t reactor_stack_get(reactor_t *);

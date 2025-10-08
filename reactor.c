@@ -186,8 +186,23 @@ reactor_cqes(reactor_t * reactor) {
     return reactor_flush(reactor);
 }
 
-void
-reactor_enter_core(reactor_t * reactor) {
+static bool
+reactor__will_block(reactor_t * reactor, size_t n) {
+    if (reactor->reserved < n) {
+        unsigned sqes = io_uring_sq_space_left(&reactor->ring);
+        if (reactor->reserved < sqes)
+            reactor->reserved = sqes;
+    }
+    return reactor->reserved < n;
+}
+
+static unsigned
+reactor__inflight(const reactor_t * reactor) {
+    return reactor->sqes - reactor->cqes;
+}
+
+static void
+reactor__enter_core(reactor_t * reactor) {
     while (reactor_runnable(reactor)) {
 
         if (reactor->sqes - reactor->tare >= submit_threshold) {
@@ -195,10 +210,10 @@ reactor_enter_core(reactor_t * reactor) {
             io_uring_submit(&reactor->ring);
         }
 
-        while (!jump_queue_empty(&reactor->todos) && !reactor_will_block(reactor, 1))
+        while (!jump_queue_empty(&reactor->todos) && !reactor__will_block(reactor, 1))
             jump_invoke(jump_queue_dequeue(&reactor->todos), reactor);
 
-        if (reactor_inflight(reactor))
+        if (reactor__inflight(reactor))
             reactor_cqes(reactor);
         else if (reactor->tare != reactor->sqes) {
             reactor->tare = reactor->sqes;
@@ -212,12 +227,29 @@ reactor_enter_core(reactor_t * reactor) {
     }
 }
 
+void
+reactor_enter_core(reactor_t * reactor) {
+    reactor__enter_core(reactor);
+}
+
 static __attribute__((noipa)) void
 reactor_sigjmp_core(reactor_t * reactor, todo_sigjmp_t * todo) {
     if (!sigsetjmp(*make_todo_sigjmp(todo, reactor->current), false)) {
-        reactor_enter_core(reactor);
+        reactor__enter_core(reactor);
         abort();
     }
+}
+
+static struct io_uring_sqe *
+reactor__sqe_or_fail(reactor_t * reactor) {
+    assert(reactor);
+    ++reactor->sqes;
+
+    if (UNLIKELY(!reactor->reserved))
+        abort();
+
+    --reactor->reserved;
+    return io_uring_get_sqe(&reactor->ring);
 }
 
 int
@@ -238,7 +270,7 @@ reactor_promise_nonchalant(reactor_t * reactor, struct io_uring_sqe * sqe) {
 
     struct __kernel_timespec kts = { .tv_nsec = 32767 };
 
-    sqe = reactor_sqe(reactor);
+    sqe = reactor__sqe_or_fail(reactor);
     io_uring_prep_link_timeout(sqe, &kts, 0
         | IORING_TIMEOUT_BOOTTIME
         );
@@ -263,7 +295,7 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
         .tv_nsec = when.tv_nsec,
     };
 
-    sqe = reactor_sqe(reactor);
+    sqe = reactor__sqe_or_fail(reactor);
     io_uring_prep_link_timeout(sqe, &kts, 0
         | IORING_TIMEOUT_ABS
         | IORING_TIMEOUT_BOOTTIME
@@ -293,8 +325,8 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     assert(todo->function);
     assert(!todo->next);
 
-    if (!reactor_will_block(reactor, 1)) {
-        struct io_uring_sqe * sqe = reactor_sqe(reactor);
+    if (!reactor__will_block(reactor, 1)) {
+        struct io_uring_sqe * sqe = reactor__sqe_or_fail(reactor);
         io_uring_prep_nop(sqe);
         io_uring_sqe_set_flags(sqe, 0);
         io_uring_sqe_set_data(sqe, (void*)todo);
@@ -308,7 +340,7 @@ reactor_defer(reactor_t * reactor) {
     todo_sigjmp_t todo;
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         jump_queue_enqueue(&reactor->todos, &todo.jump);
-        reactor_enter_core(reactor);
+        reactor__enter_core(reactor);
         abort();
     }
 }
@@ -318,13 +350,13 @@ reactor_refer(reactor_t * reactor) {
     todo_sigjmp_t todo;
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
         jump_queue_requeue(&reactor->todos, &todo.jump);
-        reactor_enter_core(reactor);
+        reactor__enter_core(reactor);
         abort();
     }
 }
 
-void
-reactor_reserve_sqes(reactor_t * reactor, size_t n) {
+static void
+reactor__reserve_sqes(reactor_t * reactor, size_t n) {
     assert(reactor);
 
     if (UNLIKELY(reactor->queue_depth < n))
@@ -333,7 +365,7 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
     if (!jump_queue_empty(&reactor->todos) || io_uring_cq_has_overflow(&reactor->ring))
         reactor_defer(reactor);
 
-    while (reactor_will_block(reactor, n)) {
+    while (reactor__will_block(reactor, n)) {
         if (io_uring_cq_ready(&reactor->ring))
             reactor_refer(reactor);
 
@@ -348,31 +380,26 @@ reactor_reserve_sqes(reactor_t * reactor, size_t n) {
     assert(reactor->reserved >= n);
 }
 
-bool
-reactor_will_block(reactor_t * reactor, size_t n) {
-    if (reactor->reserved < n) {
-        unsigned sqes = io_uring_sq_space_left(&reactor->ring);
-        if (reactor->reserved < sqes)
-            reactor->reserved = sqes;
-    }
-    return reactor->reserved < n;
+void
+reactor_reserve_sqes(reactor_t * reactor, size_t n) {
+    reactor__reserve_sqes(reactor, n);
 }
+
 
 struct io_uring_sqe *
 reactor_sqe(reactor_t * reactor) {
     assert(reactor);
     ++reactor->sqes;
 
-    if (reactor_will_block(reactor, 1))
-        reactor_reserve_sqes(reactor, 1);
+    if (reactor__will_block(reactor, 1))
+        reactor__reserve_sqes(reactor, 1);
 
     --reactor->reserved;
     return io_uring_get_sqe(&reactor->ring);
 }
 
 bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
-unsigned reactor_inflight(const reactor_t * reactor) { return reactor->sqes - reactor->cqes; }
-bool reactor_runnable(const reactor_t * reactor) { return reactor_inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos); }
+bool reactor_runnable(const reactor_t * reactor) { return reactor__inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos); }
 uintptr_t reactor_current(const reactor_t * reactor) { return (uintptr_t)reactor->current ?: (uintptr_t)reactor; }
 
 typedef struct reactor_stack_cache_s {
@@ -415,7 +442,7 @@ reactor_run(reactor_t * reactor) {
         reactor->runner = &runner;
 
         if (!sigsetjmp(*reactor->runner, false))
-            reactor_enter_core(reactor);
+            reactor__enter_core(reactor);
 
         reactor->runner = NULL;
     }
