@@ -15,7 +15,12 @@ typedef struct todo_ucontext_s {
     struct ucontext_t uc;
 } todo_ucontext_t;
 
-struct ucontext_t * make_todo_ucontext(todo_ucontext_t * todo, fiber_t * fiber);
+
+#ifndef HIDDEN
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif//HIDDEN
+
+HIDDEN struct ucontext_t * make_todo_ucontext(todo_ucontext_t * todo, fiber_t * fiber);
 
 #ifdef __cplusplus
 }

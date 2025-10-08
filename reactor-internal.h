@@ -32,20 +32,24 @@ typedef struct reactor_s {
     int urandomfd;
 } reactor_t;
 
-void reactor_enter_core(reactor_t *);
-int reactor_promise(reactor_t *, struct io_uring_sqe *);
-int reactor_promise_nonchalant(reactor_t *, struct io_uring_sqe *);
-int reactor_promise_impatient(reactor_t *, struct io_uring_sqe *, struct timespec);
-void reactor_future_fake(reactor_t *, struct io_uring_sqe *);
+#ifndef HIDDEN
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif//HIDDEN
 
-struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
-void reactor_reserve_sqes(reactor_t *, size_t);
-bool reactor_will_block(reactor_t *, size_t);
-unsigned reactor_inflight(const reactor_t *);
+HIDDEN void reactor_enter_core(reactor_t *);
+HIDDEN int reactor_promise(reactor_t *, struct io_uring_sqe *);
+HIDDEN int reactor_promise_nonchalant(reactor_t *, struct io_uring_sqe *);
+HIDDEN int reactor_promise_impatient(reactor_t *, struct io_uring_sqe *, struct timespec);
+HIDDEN void reactor_future_fake(reactor_t *, struct io_uring_sqe *);
 
-bool reactor_stack_has(reactor_t *);
-stack_t reactor_stack_get(reactor_t *);
-void reactor_stack_put(reactor_t *, stack_t);
+HIDDEN struct io_uring_sqe * reactor_sqe(reactor_t * reactor);
+HIDDEN void reactor_reserve_sqes(reactor_t *, size_t);
+HIDDEN bool reactor_will_block(reactor_t *, size_t);
+HIDDEN unsigned reactor_inflight(const reactor_t *);
+
+HIDDEN bool reactor_stack_has(reactor_t *);
+HIDDEN stack_t reactor_stack_get(reactor_t *);
+HIDDEN void reactor_stack_put(reactor_t *, stack_t);
 
 #ifdef __cplusplus
 }

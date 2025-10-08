@@ -30,12 +30,16 @@ typedef struct jump_queue_s {
     jump_chain_t ** tail;
 } jump_queue_t;
 
-void jump_queue_reset(jump_queue_t *);
-bool jump_queue_empty(const jump_queue_t *);
-void jump_queue_chain(jump_queue_t * hither, jump_queue_t * hence);
-void jump_queue_enqueue(jump_queue_t *, jump_chain_t *);
-jump_chain_t * jump_queue_dequeue(jump_queue_t *);
-void jump_queue_requeue(jump_queue_t *, jump_chain_t *);
+#ifndef HIDDEN
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif//HIDDEN
+
+HIDDEN void jump_queue_reset(jump_queue_t *);
+HIDDEN bool jump_queue_empty(const jump_queue_t *);
+HIDDEN void jump_queue_chain(jump_queue_t * hither, jump_queue_t * hence);
+HIDDEN void jump_queue_enqueue(jump_queue_t *, jump_chain_t *);
+HIDDEN jump_chain_t * jump_queue_dequeue(jump_queue_t *);
+HIDDEN void jump_queue_requeue(jump_queue_t *, jump_chain_t *);
 
 #ifdef __cplusplus
 }
