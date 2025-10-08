@@ -106,12 +106,7 @@ iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrle
 
 void
 iou_barrier(reactor_t * reactor) {
-    assert(reactor);
-
-    struct io_uring_sqe * sqe = reactor_sqe(reactor);
-    io_uring_prep_nop(sqe);
-    io_uring_sqe_set_flags(sqe, IOSQE_IO_DRAIN);
-    reactor_future_fake(reactor, sqe);
+    IOU_FAKE_FLAGS(reactor, IOSQE_IO_DRAIN, nop);
 }
 
 int
