@@ -50,19 +50,16 @@
     _l.tv_sec == _r.tv_sec && _l.tv_nsec == _r.tv_nsec; \
 })
 
-#define IOU_DELTA_WHEN(delta) ({ \
-    const struct timespec _delta = delta; \
-    IOU_DELTA_EQUAL(_delta, timespec_block) ? -1 : \
-    IOU_DELTA_EQUAL(_delta, timespec_zero) ? 0 : \
-    timespec_when(normalize_timespec(_delta)); \
-})
-
 #define IOU_DELTA_FLAGS(reactor, delta, flags, operation, ...) ({ \
     reactor_t * _reactor = (reactor); \
     assert(_reactor); \
     const struct timespec _delta = delta; \
     int result; \
-    switch (IOU_DELTA_WHEN(_delta)) { \
+    int when = \
+        IOU_DELTA_EQUAL(_delta, timespec_block) ? -1 : \
+        IOU_DELTA_EQUAL(_delta, timespec_zero) ? 0 : \
+        timespec_when(normalize_timespec(_delta)); \
+    switch (when) { \
     case -1: { \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
