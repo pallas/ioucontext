@@ -8,6 +8,10 @@
 extern "C" {
 #endif
 
+#ifndef HIDDEN
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif//HIDDEN
+
 typedef struct reactor_s reactor_t;
 typedef struct fiber_s fiber_t;
 typedef struct jump_chain_s jump_chain_t;
@@ -29,10 +33,6 @@ typedef struct jump_queue_s {
     jump_chain_t * head;
     jump_chain_t ** tail;
 } jump_queue_t;
-
-#ifndef HIDDEN
-#define HIDDEN __attribute__((visibility("hidden")))
-#endif//HIDDEN
 
 HIDDEN void jump_queue_reset(jump_queue_t *);
 HIDDEN bool jump_queue_empty(const jump_queue_t *);

@@ -15,6 +15,10 @@
 extern "C" {
 #endif
 
+#ifndef HIDDEN
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif//HIDDEN
+
 typedef struct reactor_stack_cache_s reactor_stack_cache_t;
 
 typedef struct reactor_s {
@@ -31,10 +35,6 @@ typedef struct reactor_s {
     fiber_t *current;
     int urandomfd;
 } reactor_t;
-
-#ifndef HIDDEN
-#define HIDDEN __attribute__((visibility("hidden")))
-#endif//HIDDEN
 
 HIDDEN void reactor_enter_core(reactor_t *);
 HIDDEN int reactor_promise(reactor_t *, struct io_uring_sqe *);

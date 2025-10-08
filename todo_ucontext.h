@@ -10,15 +10,14 @@
 extern "C" {
 #endif
 
+#ifndef HIDDEN
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif//HIDDEN
+
 typedef struct todo_ucontext_s {
     jump_chain_t jump;
     struct ucontext_t uc;
 } todo_ucontext_t;
-
-
-#ifndef HIDDEN
-#define HIDDEN __attribute__((visibility("hidden")))
-#endif//HIDDEN
 
 HIDDEN struct ucontext_t * make_todo_ucontext(todo_ucontext_t * todo, fiber_t * fiber);
 
