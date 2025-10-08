@@ -178,7 +178,7 @@ static unsigned
 reactor_cqes(reactor_t * reactor) {
     assert(reactor);
 
-    if (jump_queue_empty(&reactor->todos)) {
+    if (jump_queue_empty(&reactor->todos) && !io_uring_cq_ready(&reactor->ring)) {
         reactor->tare = reactor->sqes;
         io_uring_submit_and_wait(&reactor->ring, 1);
     } else if (reactor->sqes - reactor->tare >= submit_threshold) {
