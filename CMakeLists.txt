@@ -19,6 +19,7 @@ project(ioucontext)
 # objects become the library
 set(${PROJECT_NAME}_OBJECTS
 	arena
+	bitset
 	eventcount
 	fiber
 	jump_queue
