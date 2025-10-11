@@ -32,7 +32,6 @@ static void
 iou_ares_pending_write_cb(void *data) {
     iou_ares_data_t * iou_ares_data = (iou_ares_data_t *)data;
     assert(iou_mutex_taken(iou_ares_data->reactor, &iou_ares_data->mutex));
-    assert(!iou_ares_data->pending_writes);
     ++iou_ares_data->pending_writes;
 }
 
@@ -40,7 +39,6 @@ static void
 iou_ares_flush_pending_writes(iou_ares_data_t * iou_ares_data) {
     assert(iou_mutex_taken(iou_ares_data->reactor, &iou_ares_data->mutex));
     if (iou_ares_data->pending_writes) do {
-        assert(iou_ares_data->pending_writes == 1);
         ares_process_pending_write(iou_ares_data->channel);
     } while (UNLIKELY(--iou_ares_data->pending_writes));
 }
