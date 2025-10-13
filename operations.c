@@ -67,7 +67,7 @@
         result = reactor_promise(_reactor, sqe); \
         } break; \
     case 0: { \
-        reactor_reserve_sqes(reactor, 2); \
+        reactor_reserve_sqes(_reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
         io_uring_sqe_set_flags(sqe, flags); \
@@ -75,7 +75,7 @@
         } break; \
     case 1: { \
         struct timespec when = reify_timespec(_delta); \
-        reactor_reserve_sqes(reactor, 2); \
+        reactor_reserve_sqes(_reactor, 2); \
         struct io_uring_sqe * sqe = reactor_sqe(_reactor); \
         io_uring_prep_ ## operation(sqe __VA_OPT__(,) __VA_ARGS__); \
         io_uring_sqe_set_flags(sqe, flags); \
