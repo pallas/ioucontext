@@ -189,10 +189,11 @@ reactor_cqes(reactor_t * reactor) {
 static bool
 reactor__will_block(reactor_t * reactor, size_t n) {
     if (reactor->reserved < n) {
-        unsigned sqes = io_uring_sq_space_left(&reactor->ring);
-        if (reactor->reserved < sqes)
-            reactor->reserved = sqes;
+        const unsigned sqes = io_uring_sq_space_left(&reactor->ring);
+        assert(reactor->reserved <= sqes);
+        reactor->reserved = sqes;
     }
+
     return reactor->reserved < n;
 }
 
