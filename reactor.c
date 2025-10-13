@@ -179,21 +179,6 @@ reactor_flush(reactor_t * reactor) {
 
 static const unsigned submit_threshold = 16;
 
-static unsigned
-reactor_cqes(reactor_t * reactor) {
-    assert(reactor);
-
-    if (jump_queue_empty(&reactor->todos) && !io_uring_cq_ready(&reactor->ring)) {
-        reactor->tare = reactor->sqes;
-        io_uring_submit_and_wait(&reactor->ring, 1);
-    } else if (reactor->sqes - reactor->tare >= submit_threshold) {
-        reactor->tare = reactor->sqes;
-        io_uring_submit(&reactor->ring);
-    }
-
-    return reactor_flush(reactor);
-}
-
 static bool
 reactor__will_block(reactor_t * reactor, size_t n) {
     if (reactor->reserved < n) {
@@ -211,8 +196,11 @@ reactor__enter_core(reactor_t * reactor) {
 
         if (reactor->sqes - reactor->tare >= submit_threshold) {
             reactor->tare = reactor->sqes;
-            io_uring_submit(&reactor->ring);
+            TRY(io_uring_submit_and_get_events, &reactor->ring);
         }
+
+        if (reactor__inflight(reactor))
+            reactor_flush(reactor);
 
         while (!jump_queue_empty(&reactor->todos) && !reactor__will_block(reactor, 1)) {
             jump_chain_t * todo = jump_queue_dequeue(&reactor->todos);
@@ -221,11 +209,9 @@ reactor__enter_core(reactor_t * reactor) {
             jump_invoke(todo, reactor);
         }
 
-        if (reactor__inflight(reactor))
-            reactor_cqes(reactor);
-        else if (reactor->tare != reactor->sqes) {
+        if (reactor__inflight(reactor) && !io_uring_cq_ready(&reactor->ring)) {
             reactor->tare = reactor->sqes;
-            io_uring_submit(&reactor->ring);
+            TRY(io_uring_submit_and_wait, &reactor->ring, 1);
         }
     }
 
