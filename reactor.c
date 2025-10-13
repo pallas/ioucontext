@@ -367,7 +367,7 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
             reactor_defer(reactor);
         } else if (!reactor__inflight(reactor) && !reactor->reserved) {
             TRY(io_uring_sqring_wait, &reactor->ring);
-        } else if (io_uring_cq_ready(&reactor->ring)) {
+        } else if (reactor__inflight(reactor)) {
             reactor_flush(reactor);
         } else if (reactor->tare != reactor->sqes) {
             reactor->tare = reactor->sqes;
