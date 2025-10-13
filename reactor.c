@@ -355,16 +355,6 @@ reactor_defer(reactor_t * reactor) {
     assert(todo.jump.fiber == reactor->current);
 }
 
-static __attribute__((noipa)) void
-reactor_refer(reactor_t * reactor) {
-    todo_sigjmp_t todo;
-    if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        jump_queue_requeue(&reactor->todos, &todo.jump);
-        reactor__enter_core(reactor);
-    }
-    assert(todo.jump.fiber == reactor->current);
-}
-
 static void
 reactor__reserve_sqes(reactor_t * reactor, size_t n) {
     assert(reactor);
