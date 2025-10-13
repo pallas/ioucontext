@@ -7,6 +7,7 @@
 
 socklen_t
 sockaddr_parse(struct sockaddr_storage *ss, const char *address, uint16_t port) {
+    memset(ss, 0, sizeof *ss);
 
     struct sockaddr_in *sin = (struct sockaddr_in*)ss;
     if (inet_pton(AF_INET, address, &sin->sin_addr) > 0) {
