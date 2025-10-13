@@ -372,18 +372,19 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
     if (UNLIKELY(reactor->queue_depth < n))
         abort();
 
-    if (!jump_queue_empty(&reactor->todos) || io_uring_cq_has_overflow(&reactor->ring))
-        reactor_defer(reactor);
-
     while (reactor__will_block(reactor, n)) {
-        if (io_uring_cq_ready(&reactor->ring))
-            reactor_refer(reactor);
-
-        reactor->tare = reactor->sqes;
-        TRY(io_uring_submit_and_get_events, &reactor->ring);
-
-        if (!io_uring_cq_ready(&reactor->ring))
+        if (!jump_queue_empty(&reactor->todos)) {
+            reactor_defer(reactor);
+        } else if (!reactor__inflight(reactor) && !reactor->reserved) {
             TRY(io_uring_sqring_wait, &reactor->ring);
+        } else if (io_uring_cq_ready(&reactor->ring)) {
+            reactor_flush(reactor);
+        } else if (reactor->tare != reactor->sqes) {
+            reactor->tare = reactor->sqes;
+            TRY(io_uring_submit_and_get_events, &reactor->ring);
+        } else {
+            TRY(io_uring_get_events, &reactor->ring);
+        }
     }
 
     assert(io_uring_sq_space_left(&reactor->ring) >= n);
