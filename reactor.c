@@ -141,6 +141,11 @@ make_reactor_key() {
 }
 
 static unsigned
+reactor__inflight(const reactor_t * reactor) {
+    return reactor->sqes - reactor->cqes;
+}
+
+static unsigned
 reactor_flush(reactor_t * reactor) {
     unsigned base = reactor->cqes;
 
@@ -167,7 +172,7 @@ reactor_flush(reactor_t * reactor) {
             }
             io_uring_cq_advance(&reactor->ring, n);
         }
-    } while (n == n_cqes);
+    } while (n == n_cqes && reactor__inflight(reactor));
 
     return reactor->cqes - base;
 }
@@ -198,11 +203,6 @@ reactor__will_block(reactor_t * reactor, size_t n) {
     }
 
     return reactor->reserved < n;
-}
-
-static unsigned
-reactor__inflight(const reactor_t * reactor) {
-    return reactor->sqes - reactor->cqes;
 }
 
 static void
