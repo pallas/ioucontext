@@ -145,8 +145,13 @@ reactor__inflight(const reactor_t * reactor) {
     return reactor->sqes - reactor->cqes;
 }
 
+static bool
+reactor__flushable(const reactor_t * reactor) {
+    return reactor__inflight(reactor) && io_uring_cq_ready(&reactor->ring);
+}
+
 static unsigned
-reactor_flush(reactor_t * reactor) {
+reactor__flush(reactor_t * reactor) {
     unsigned base = reactor->cqes;
 
     static const size_t n_cqes = 64;
@@ -199,8 +204,8 @@ reactor__enter_core(reactor_t * reactor) {
             TRY(io_uring_submit_and_get_events, &reactor->ring);
         }
 
-        if (reactor__inflight(reactor))
-            reactor_flush(reactor);
+        if (reactor__flushable(reactor))
+            reactor__flush(reactor);
 
         while (!jump_queue_empty(&reactor->todos) && !reactor__will_block(reactor, 1)) {
             jump_chain_t * todo = jump_queue_dequeue(&reactor->todos);
@@ -353,8 +358,8 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
             reactor_defer(reactor);
         } else if (!reactor__inflight(reactor) && !reactor->reserved) {
             TRY(io_uring_sqring_wait, &reactor->ring);
-        } else if (reactor__inflight(reactor)) {
-            reactor_flush(reactor);
+        } else if (reactor__flushable(reactor)) {
+            reactor__flush(reactor);
         } else if (reactor->tare != reactor->sqes) {
             reactor->tare = reactor->sqes;
             TRY(io_uring_submit_and_get_events, &reactor->ring);
