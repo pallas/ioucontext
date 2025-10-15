@@ -405,8 +405,8 @@ iou_ares_resolve_any(iou_ares_data_t * data, const void ** canary) {
 
     assert(ares_queue_active_queries(data->channel));
 
-    struct epoll_event events[32];
-    static const size_t n_events = sizeof(events)/sizeof(*events);
+    enum { n_events = 32 };
+    struct epoll_event events[n_events];
     ares_fd_events_t fds[n_events];
 
     int nfds = iou_epoll_wait(data->reactor, data->epfd, events, n_events, timeval_to_timespec(timeout));
