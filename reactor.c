@@ -41,12 +41,6 @@ reactor_set(reactor_t * reactor) {
         }
     }
 
-    static _Atomic int fd = -1;
-    if (fd >= 0) {
-        params.flags |= IORING_SETUP_ATTACH_WQ;
-        params.wq_fd = fd;
-    }
-
     const char * env_queue_depth = getenv("IOUCONTEXT_QUEUE_DEPTH");
     reactor->queue_depth = env_queue_depth ? strtoul(env_queue_depth, NULL, 0) : 1024;
 
@@ -68,9 +62,6 @@ reactor_set(reactor_t * reactor) {
     reactor->sqes = reactor->tare = reactor->cqes = reactor->reserved = 0;
     reactor->current = NULL;
     reactor->urandomfd = -1;
-
-    if (fd < 0)
-        fd = reactor->ring.ring_fd;
 }
 
 reactor_t *
