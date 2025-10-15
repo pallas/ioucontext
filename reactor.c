@@ -361,14 +361,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     assert(todo->function);
     assert(!todo->next);
 
-    if (!reactor__will_block(reactor, 1)) {
-        struct io_uring_sqe * sqe = reactor__sqe_or_fail(reactor);
-        io_uring_prep_nop(sqe);
-        io_uring_sqe_set_flags(sqe, 0);
-        io_uring_sqe_set_data(sqe, (void*)todo);
-    } else {
-        jump_queue_enqueue(&reactor->todos[0], todo);
-    }
+    jump_queue_enqueue(&reactor->todos[0], todo);
 }
 
 static __attribute__((noipa)) void
