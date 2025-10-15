@@ -24,7 +24,7 @@ max_pipe(int fd) {
     return fcntl(fd, F_GETPIPE_SZ);
 }
 
-static const uint64_t efd_eof = UINT64_MAX - 1;
+enum { efd_eof = UINT64_MAX - 1 };
 
 int
 source(reactor_t * reactor, int from, int to, int efd) {
