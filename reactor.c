@@ -18,7 +18,7 @@ static once_flag reactor_key_once_flag = ONCE_FLAG_INIT;
 
 static thread_local reactor_t reactor_local;
 
-static const unsigned submit_threshold = 16;
+enum { submit_threshold = 16 };
 
 static void
 reactor_set(reactor_t * reactor) {
