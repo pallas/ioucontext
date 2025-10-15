@@ -168,7 +168,7 @@ static unsigned
 reactor__flush(reactor_t * reactor) {
     unsigned base = reactor->cqes;
 
-    static const size_t n_cqes = 64;
+    enum { n_cqes = 64 };
     struct io_uring_cqe *cqes[n_cqes];
     unsigned n;
     do {
