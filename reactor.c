@@ -416,6 +416,12 @@ bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
 bool reactor_runnable(const reactor_t * reactor) { return reactor__runnable(reactor); }
 uintptr_t reactor_current(const reactor_t * reactor) { return (uintptr_t)reactor->current ?: (uintptr_t)reactor; }
 
+void
+reactor_max_workers(reactor_t * reactor, unsigned bounded, unsigned unbounded) {
+    unsigned int iowq_max_workers[] = { bounded, unbounded };
+    TRY(io_uring_register_iowq_max_workers, &reactor->ring, iowq_max_workers);
+}
+
 typedef struct reactor_stack_cache_s {
     stack_t stack;
     reactor_stack_cache_t *next;

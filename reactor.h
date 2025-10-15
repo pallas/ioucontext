@@ -19,6 +19,8 @@ bool reactor_runnable(const reactor_t *);
 bool reactor_running(const reactor_t *);
 uintptr_t reactor_current(const reactor_t *);
 
+void reactor_max_workers(reactor_t *, unsigned bounded, unsigned unbounded);
+
 void reactor_park(reactor_t *, jump_chain_t **);
 void reactor_schedule(reactor_t *, jump_chain_t *);
 
