@@ -6,9 +6,11 @@
 #include <assert.h>
 #include <time.h>
 
-static const long msec_per_sec = 1000;
-static const long nsec_per_msec = 1000000;
-static const long nsec_per_sec = 1000000000;
+enum {
+    msec_per_sec = 1000,
+    nsec_per_msec = 1000000,
+    nsec_per_sec = 1000000000,
+};
 
 static inline struct timespec
 __normalize_timespec(const struct timespec ts) {
