@@ -846,7 +846,7 @@ iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, 
     VALGRIND_CHECK_MEM_IS_DEFINED(message, length);
     VALGRIND_CHECK_MEM_IS_DEFINED(dest_addr, dest_len);
 
-    static const size_t zero_copy_threshold = 1<<15;
+    enum { zero_copy_threshold = 1<<15 };
 
     struct iovec iov = {
         .iov_base = (void*)message,
