@@ -57,7 +57,7 @@ reactor_set(reactor_t * reactor) {
     if (params.features & IORING_FEAT_NO_IOWAIT)
         TRY(io_uring_set_iowait, &reactor->ring, false);
 
-    jump_queue_reset(&reactor->todos);
+    jump_queue_reset(&reactor->todos[0]);
     reactor->runner = NULL;
     reactor->stack = stack_dofork(stack_get_signal());
     reactor->stack_cache = NULL;
@@ -172,7 +172,7 @@ reactor__flush(reactor_t * reactor) {
                     ++reactor->sqes;
                     ++reactor->tare;
                 } else {
-                    jump_queue_enqueue(&reactor->todos, todo);
+                    jump_queue_enqueue(&reactor->todos[0], todo);
                 }
             }
             io_uring_cq_advance(&reactor->ring, n);
@@ -207,8 +207,8 @@ reactor__enter_core(reactor_t * reactor) {
         if (reactor__flushable(reactor))
             reactor__flush(reactor);
 
-        while (!jump_queue_empty(&reactor->todos) && !reactor__will_block(reactor, 1)) {
-            jump_chain_t * todo = jump_queue_dequeue(&reactor->todos);
+        while (!jump_queue_empty(&reactor->todos[0]) && !reactor__will_block(reactor, 1)) {
+            jump_chain_t * todo = jump_queue_dequeue(&reactor->todos[0]);
             if (todo->fiber == reactor->current)
                 return;
             jump_invoke(todo, reactor);
@@ -332,7 +332,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
         io_uring_sqe_set_flags(sqe, 0);
         io_uring_sqe_set_data(sqe, (void*)todo);
     } else {
-        jump_queue_enqueue(&reactor->todos, todo);
+        jump_queue_enqueue(&reactor->todos[0], todo);
     }
 }
 
@@ -340,7 +340,7 @@ static __attribute__((noipa)) void
 reactor_defer(reactor_t * reactor) {
     todo_sigjmp_t todo;
     if (!sigsetjmp(*make_todo_sigjmp(&todo, reactor->current), false)) {
-        jump_queue_enqueue(&reactor->todos, &todo.jump);
+        jump_queue_enqueue(&reactor->todos[0], &todo.jump);
         reactor__enter_core(reactor);
     }
     assert(todo.jump.fiber == reactor->current);
@@ -354,7 +354,7 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
         abort();
 
     while (reactor__will_block(reactor, n)) {
-        if (!jump_queue_empty(&reactor->todos)) {
+        if (!jump_queue_empty(&reactor->todos[0])) {
             reactor_defer(reactor);
         } else if (!reactor__inflight(reactor) && !reactor->reserved) {
             TRY(io_uring_sqring_wait, &reactor->ring);
@@ -391,7 +391,7 @@ reactor_sqe(reactor_t * reactor) {
 }
 
 bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
-bool reactor_runnable(const reactor_t * reactor) { return reactor__inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos); }
+bool reactor_runnable(const reactor_t * reactor) { return reactor__inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos[0]); }
 uintptr_t reactor_current(const reactor_t * reactor) { return (uintptr_t)reactor->current ?: (uintptr_t)reactor; }
 
 typedef struct reactor_stack_cache_s {
