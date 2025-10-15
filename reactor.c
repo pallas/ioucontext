@@ -146,6 +146,11 @@ reactor__inflight(const reactor_t * reactor) {
 }
 
 static bool
+reactor__runnable(const reactor_t * reactor) {
+    return reactor__inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos[0]);
+}
+
+static bool
 reactor__flushable(const reactor_t * reactor) {
     return reactor__inflight(reactor) && io_uring_cq_ready(&reactor->ring);
 }
@@ -197,7 +202,7 @@ reactor__will_block(reactor_t * reactor, size_t n) {
 
 static void
 reactor__enter_core(reactor_t * reactor) {
-    while (reactor_runnable(reactor)) {
+    while (reactor__runnable(reactor)) {
 
         if (reactor->sqes - reactor->tare >= submit_threshold) {
             reactor->tare = reactor->sqes;
@@ -391,7 +396,7 @@ reactor_sqe(reactor_t * reactor) {
 }
 
 bool reactor_running(const reactor_t * reactor) { return reactor->runner; }
-bool reactor_runnable(const reactor_t * reactor) { return reactor__inflight(reactor) > 0 || !jump_queue_empty(&reactor->todos[0]); }
+bool reactor_runnable(const reactor_t * reactor) { return reactor__runnable(reactor); }
 uintptr_t reactor_current(const reactor_t * reactor) { return (uintptr_t)reactor->current ?: (uintptr_t)reactor; }
 
 typedef struct reactor_stack_cache_s {
@@ -429,7 +434,7 @@ reactor_run(reactor_t * reactor) {
     assert(!reactor_running(reactor));
     assert(!reactor->current);
 
-    if (reactor_runnable(reactor)) {
+    if (reactor__runnable(reactor)) {
         sigjmp_buf runner;
         reactor->runner = &runner;
 
