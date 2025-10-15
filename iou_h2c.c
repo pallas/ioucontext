@@ -241,7 +241,7 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
     session_data_t *session_data = (session_data_t *)user_data;
     stream_data_t *stream_data = (stream_data_t *)source->ptr;
 
-    static const size_t framehd_len = 9;
+    enum { framehd_len = 9 };
 
     int siocoutq = iou_siocoutq(session_data->reactor, session_data->fd);
     if (session_data->fd_sndbuf < siocoutq + framehd_len + length + frame->data.padlen)
