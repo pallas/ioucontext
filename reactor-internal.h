@@ -23,7 +23,7 @@ typedef struct reactor_stack_cache_s reactor_stack_cache_t;
 
 typedef struct reactor_s {
     struct io_uring ring;
-    jump_queue_t todos[1];
+    jump_queue_t todos[3];
     sigjmp_buf *runner;
     stack_t stack;
     reactor_stack_cache_t * stack_cache;
