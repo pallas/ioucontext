@@ -443,8 +443,10 @@ fiber(reactor_t * reactor, int accept_fd) {
         const struct timespec when = reify_timespec(timespec_ms(5));
         if (iou_yield(reactor) && timespec_past(dereify_timespec(when))) {
             const static struct linger linger_zero = { .l_onoff = 1, .l_linger = 0, };
-            iou_setsockopt(reactor, session_data.fd, SOL_SOCKET, SO_LINGER, &linger_zero, sizeof linger_zero);
+            TRY(iou_setsockopt, reactor, session_data.fd, SOL_SOCKET, SO_LINGER, &linger_zero, sizeof linger_zero);
         } else {
+            TRY(iou_setsockopt_int, reactor, session_data.fd, IPPROTO_TCP, TCP_NODELAY, 1);
+            TRY(iou_setsockopt_int, reactor, session_data.fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, 1<<15);
             process(reactor, &session_data, settings, sizeof(settings)/sizeof(*settings));
         }
         session_data.flags = 0;
