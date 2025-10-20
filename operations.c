@@ -98,7 +98,7 @@ iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrle
 
     int result = IOU(reactor, accept, fd, addr, addrlen, flags);
 
-    if (addr && result > 0)
+    if (addr && result >= 0)
         VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(addr, *addrlen);
 
     return result;
