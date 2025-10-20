@@ -1155,7 +1155,7 @@ iou_vprintf(reactor_t * reactor, int fd, const char *format, va_list args) {
         fflush(file);
         fclose(file);
     } else if (result > 0) {
-        result = iou_pwrite(reactor, fd, buffer, result, -1);
+        result = iou_write(reactor, fd, buffer, result);
     }
 
     va_end(copy);
