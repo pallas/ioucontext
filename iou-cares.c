@@ -443,7 +443,6 @@ iou_ares_resolve_one(iou_ares_future_t * future) {
 static void
 iou_ares_resolve_all(reactor_t * reactor, iou_ares_data_t * data) {
     assert(reactor == data->reactor);
-    assert(ares_queue_active_queries(data->channel));
     while (iou_ares_resolve_any(data, NULL))
         iou_yield(reactor);
     --data->waiters;
