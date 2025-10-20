@@ -532,11 +532,11 @@ iou_futex_wake32_bitset_fast(reactor_t * reactor, uint32_t *futex, uint32_t mask
 
 ssize_t
 iou_getrandom(reactor_t * reactor, char *buf, size_t buflen) {
-    if (reactor->urandomfd < 0)
+    if (reactor->urandomfd < 0) {
         reactor->urandomfd = iou_open(reactor, "/dev/urandom", O_RDONLY | O_CLOEXEC, 0);
-
-    if (reactor->urandomfd < 0)
-        return reactor->urandomfd;
+        if (reactor->urandomfd < 0)
+            return reactor->urandomfd;
+    }
 
     return iou_read(reactor, reactor->urandomfd, buf, buflen);
 }
