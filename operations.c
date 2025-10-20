@@ -1230,8 +1230,15 @@ iou_write(reactor_t * reactor, int fildes, const void *buf, size_t nbytes) {
 
     while (out < nbytes) {
         ssize_t n = iou_pwrite(reactor, fildes, buf + out, nbytes - out, -1);
-        if (n < 0)
-            return n;
+        if (n <= 0) switch(n) {
+        case 0: return out;
+        case -EINTR: continue;
+        case -EAGAIN:
+            if (!iou_yield(reactor))
+                iou_poll_out(reactor, fildes, timespec_block);
+            continue;
+        default: return n;
+        }
         out += n;
     }
 
