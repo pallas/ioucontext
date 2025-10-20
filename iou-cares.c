@@ -443,6 +443,7 @@ iou_ares_resolve_one(iou_ares_future_t * future) {
 static void
 iou_ares_resolve_all(reactor_t * reactor, iou_ares_data_t * data) {
     assert(reactor == data->reactor);
+    assert(ares_queue_active_queries(data->channel));
     while (iou_ares_resolve_any(data, NULL))
         iou_yield(reactor);
     --data->waiters;
@@ -465,10 +466,10 @@ iou_ares__wait(iou_ares_future_t * future, ...) {
             } while (future && (!future->data || future->data == data));
 
             assert(data->waiters > 0);
-            if (data->waiters > 1 || ares_queue_active_queries(data->channel))
+            if (ares_queue_active_queries(data->channel))
                 reactor_fiber(iou_ares_resolve_all, data->reactor, data);
             else
-                data->waiters = 0;
+                --data->waiters;
         } else {
             reactor_park(data->reactor, &future->jump);
             --data->waiters;
