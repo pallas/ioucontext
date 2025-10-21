@@ -77,7 +77,7 @@ cat(reactor_t * reactor, int argc, const char *argv[]) {
             if (source(reactor, STDIN_FILENO, pipe_in, efd))
                 break;
         } else {
-            int fd = TRY(iou_open, reactor, argv[i], O_RDONLY, 0);
+            int fd = TRY(iou_open_direct, reactor, argv[i], O_RDONLY, 0);
             if (source(reactor, fd, pipe_in, efd))
                 break;
             TRY(iou_close, reactor, fd);
