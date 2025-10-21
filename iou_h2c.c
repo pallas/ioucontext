@@ -132,12 +132,8 @@ iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *fra
     if (stream_data->fd >= 0) {
         iou_fadvise(session_data->reactor, stream_data->fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
-        int result = iou_pipe(session_data->reactor, &stream_data->pipe_out, &stream_data->pipe_in, O_CLOEXEC | O_NONBLOCK);
-        if (result >= 0) {
-            stream_data->pipe_max = fcntl(stream_data->pipe_in, F_GETPIPE_SZ);
-            stream_data->pipe_in = iou_fd_transmute(session_data->reactor, stream_data->pipe_in);
-            stream_data->pipe_out = iou_fd_transmute(session_data->reactor, stream_data->pipe_out);
-        }
+        int result = iou_pipe_direct(session_data->reactor, &stream_data->pipe_out, &stream_data->pipe_in, O_CLOEXEC | O_NONBLOCK);
+        stream_data->pipe_max = result < 0 ? -1 : (1<<16); //fcntl(stream_data->pipe_in, F_GETPIPE_SZ);
     }
 
     nghttp2_session_set_stream_user_data(session, frame->hd.stream_id, stream_data);
