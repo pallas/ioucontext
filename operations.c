@@ -833,7 +833,7 @@ iou_pipe_direct(reactor_t * reactor, int *read_fd, int *write_fd, int flags) {
         return iou_pipe(reactor, read_fd, write_fd, flags);
 
     int pipefd[2];
-    int result = IOU(reactor, pipe_direct, pipefd, flags, index);
+    int result = IOU(reactor, pipe_direct, pipefd, flags & ~O_CLOEXEC, index);
     if (result < 0) {
         bitset_put(reactor->registered_file_bits, index+0);
         bitset_put(reactor->registered_file_bits, index+1);
@@ -841,8 +841,8 @@ iou_pipe_direct(reactor_t * reactor, int *read_fd, int *write_fd, int flags) {
     }
 
     VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(pipefd, sizeof pipefd);
-    *read_fd = FD_BUILD(pipefd[0]);
-    *write_fd = FD_BUILD(pipefd[1]);
+    *read_fd = FD_BUILD(index+0);
+    *write_fd = FD_BUILD(index+1);
 
     return 0;
 }
