@@ -266,7 +266,12 @@ iou_fd_setlock(reactor_t * reactor, int fd, const struct flock *lock, const stru
 
     VALGRIND_CHECK_MEM_IS_DEFINED(lock, sizeof *lock);
 
-    switch (timespec_when(normalize_timespec(delta))) {
+    int when =
+        IOU_DELTA_EQUAL(delta, timespec_block) ? -1 :
+        IOU_DELTA_EQUAL(delta, timespec_zero) ? 0 :
+        timespec_when(normalize_timespec(delta));
+
+    switch (when) {
     case -1: {
         int result = fcntl(fd, F_OFD_SETLK, lock);
         while (result && (errno == EACCES || errno == EAGAIN || errno == EINTR))
