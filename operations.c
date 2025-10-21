@@ -643,6 +643,10 @@ int
 iou_pipe(reactor_t * reactor, int *read_fd, int *write_fd, int flags) {
     int pipefd[2];
     int result = IOU(reactor, pipe, pipefd, flags);
+
+    if (result < 0)
+        result = pipe2(pipefd, flags);
+
     if (result < 0)
         return result;
 
