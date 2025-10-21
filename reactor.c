@@ -235,7 +235,7 @@ reactor__enter_core(reactor_t * reactor) {
 
         if (reactor->sqes - reactor->tare >= submit_threshold) {
             reactor->tare = reactor->sqes;
-            TRY(io_uring_submit_and_get_events, &reactor->ring);
+            TRY(io_uring_submit, &reactor->ring);
         }
 
         if (reactor__flushable(reactor))
@@ -406,7 +406,7 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
             reactor__flush(reactor);
         } else if (reactor->tare != reactor->sqes) {
             reactor->tare = reactor->sqes;
-            TRY(io_uring_submit_and_get_events, &reactor->ring);
+            TRY(io_uring_submit, &reactor->ring);
         } else {
             TRY(io_uring_get_events, &reactor->ring);
         }
