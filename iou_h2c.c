@@ -127,13 +127,17 @@ iou_on_begin_headers_callback(nghttp2_session *session, const nghttp2_frame *fra
         return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
     }
 
-    stream_data->fd = iou_open(session_data->reactor, words_file, O_RDONLY, O_CLOEXEC);
+    stream_data->fd = iou_open_direct(session_data->reactor, words_file, O_RDONLY, O_CLOEXEC);
 
     if (stream_data->fd >= 0) {
         iou_fadvise(session_data->reactor, stream_data->fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
         int result = iou_pipe(session_data->reactor, &stream_data->pipe_out, &stream_data->pipe_in, O_CLOEXEC | O_NONBLOCK);
-        stream_data->pipe_max = result < 0 ? -1 : fcntl(stream_data->pipe_in, F_GETPIPE_SZ);
+        if (result >= 0) {
+            stream_data->pipe_max = fcntl(stream_data->pipe_in, F_GETPIPE_SZ);
+            stream_data->pipe_in = iou_fd_transmute(session_data->reactor, stream_data->pipe_in);
+            stream_data->pipe_out = iou_fd_transmute(session_data->reactor, stream_data->pipe_out);
+        }
     }
 
     nghttp2_session_set_stream_user_data(session, frame->hd.stream_id, stream_data);
@@ -438,7 +442,7 @@ fiber(reactor_t * reactor, int accept_fd) {
         { NGHTTP2_SETTINGS_NO_RFC7540_PRIORITIES, 1 },
     };
 
-    while ((session_data.fd = iou_accept(reactor, accept_fd, NULL, 0, SOCK_CLOEXEC)) >= 0) {
+    while ((session_data.fd = iou_accept_direct(reactor, accept_fd, NULL, 0, SOCK_CLOEXEC)) >= 0) {
 
         const struct timespec when = reify_timespec(timespec_ms(5));
         if (iou_yield(reactor) && timespec_past(dereify_timespec(when))) {
@@ -475,10 +479,15 @@ thread(void *context) {
 
     reactor_t *reactor = reactor_get();
 
+    int accept_fd = iou_fd_register(reactor, info->accept_fd);
     for (unsigned i = 0 ; i < 64 ; ++i)
-        reactor_fiber(fiber, reactor, info->accept_fd);
+        reactor_fiber(fiber, reactor, accept_fd);
 
     reactor_run(reactor);
+
+    if (info->accept_fd != accept_fd)
+        iou_close_fast(reactor, accept_fd);
+
     return 0;
 }
 
