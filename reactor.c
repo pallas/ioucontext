@@ -235,7 +235,7 @@ reactor__enter_core(reactor_t * reactor) {
 
         if (reactor->sqes - reactor->tare >= submit_threshold) {
             reactor->tare = reactor->sqes;
-            TRY(io_uring_submit, &reactor->ring);
+            io_uring_submit(&reactor->ring);
         }
 
         if (reactor__flushable(reactor))
@@ -266,7 +266,7 @@ reactor__enter_core(reactor_t * reactor) {
 
         if (reactor__inflight(reactor) && !io_uring_cq_ready(&reactor->ring)) {
             reactor->tare = reactor->sqes;
-            TRY(io_uring_submit_and_wait, &reactor->ring, 1);
+            io_uring_submit_and_wait(&reactor->ring, 1);
         }
     }
 
@@ -401,14 +401,14 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
         if (reactor__todos_queued(reactor)) {
             reactor_defer(reactor, n);
         } else if (!reactor__inflight(reactor) && !reactor->reserved) {
-            TRY(io_uring_sqring_wait, &reactor->ring);
+            io_uring_sqring_wait(&reactor->ring);
         } else if (reactor__flushable(reactor)) {
             reactor__flush(reactor);
         } else if (reactor->tare != reactor->sqes) {
             reactor->tare = reactor->sqes;
-            TRY(io_uring_submit, &reactor->ring);
-        } else {
-            TRY(io_uring_get_events, &reactor->ring);
+            io_uring_submit(&reactor->ring);
+        } else if (!io_uring_cq_ready(&reactor->ring)) {
+            io_uring_get_events(&reactor->ring);
         }
     }
 
