@@ -686,7 +686,7 @@ iou_getrandom(reactor_t * reactor, char *buf, size_t buflen) {
             return reactor->urandomfd;
     }
 
-    return iou_read(reactor, reactor->urandomfd, buf, buflen);
+    return RESTART(iou_read, reactor, reactor->urandomfd, buf, buflen);
 }
 
 int
