@@ -25,7 +25,7 @@ typedef struct todo_null_s todo_null_t;
 
 typedef struct reactor_s {
     struct io_uring ring;
-    jump_queue_t todos[3];
+    jump_queue_t todos[4];
     sigjmp_buf *runner;
     stack_t stack;
     reactor_stack_cache_t * stack_cache;

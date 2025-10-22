@@ -78,6 +78,7 @@ reactor_set(reactor_t * reactor) {
     jump_queue_reset(&reactor->todos[0]);
     jump_queue_reset(&reactor->todos[1]);
     jump_queue_reset(&reactor->todos[2]);
+    jump_queue_reset(&reactor->todos[3]);
     reactor->runner = NULL;
     reactor->stack = stack_dofork(stack_get_signal());
     reactor->stack_cache = NULL;
@@ -171,6 +172,7 @@ reactor__todos_queued(const reactor_t * reactor) {
         || !jump_queue_empty(&reactor->todos[0])
         || !jump_queue_empty(&reactor->todos[1])
         || !jump_queue_empty(&reactor->todos[2])
+        || !jump_queue_empty(&reactor->todos[3])
         ;;
 }
 
