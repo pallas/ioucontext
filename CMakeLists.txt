@@ -32,6 +32,7 @@ set(${PROJECT_NAME}_OBJECTS
 	sockaddr
 	stack
 	timespec
+	todo_null
 	todo_sigjmp
 	todo_ucontext
         )

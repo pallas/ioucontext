@@ -21,6 +21,7 @@ extern "C" {
 
 typedef struct bitset_s bitset_t;
 typedef struct reactor_stack_cache_s reactor_stack_cache_t;
+typedef struct todo_null_s todo_null_t;
 
 typedef struct reactor_s {
     struct io_uring ring;
@@ -42,6 +43,7 @@ HIDDEN void reactor_enter_core(reactor_t *);
 HIDDEN int reactor_promise(reactor_t *, struct io_uring_sqe *);
 HIDDEN int reactor_promise_nonchalant(reactor_t *, struct io_uring_sqe *);
 HIDDEN int reactor_promise_impatient(reactor_t *, struct io_uring_sqe *, struct timespec);
+HIDDEN void reactor_promise_nothing(reactor_t *, struct io_uring_sqe *, todo_null_t *);
 HIDDEN void reactor_future_fake(reactor_t *, struct io_uring_sqe *);
 
 HIDDEN struct io_uring_sqe * reactor_sqe(reactor_t * reactor);

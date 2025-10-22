@@ -5,6 +5,7 @@
 #include "bitset.h"
 #include "macros-internal.h"
 #include "stack.h"
+#include "todo_null.h"
 #include "todo_sigjmp.h"
 
 #include <assert.h>
@@ -356,6 +357,13 @@ reactor_promise_impatient(reactor_t * reactor, struct io_uring_sqe * sqe, struct
 
     reactor_sigjmp_core(reactor, &todo);
     return todo.jump.result;
+}
+
+void
+reactor_promise_nothing(reactor_t * reactor, struct io_uring_sqe * sqe, todo_null_t * todo) {
+    make_todo_null(todo);
+    sqe->flags |= IOSQE_IO_LINK;
+    io_uring_sqe_set_data(sqe, (void*)&todo->jump);
 }
 
 void
