@@ -45,6 +45,14 @@ extern "C" {
     _result < 0 ? ( errno = -_result), -1 : _result; \
 })
 
+#define RESTART(f, ...) ({ \
+    typeof (f(__VA_ARGS__)) _result; \
+    do { \
+        _result = f(__VA_ARGS__); \
+    } while (__builtin_expect(-EINTR == _result, 0)); \
+    _result; \
+})
+
 #ifdef __cplusplus
 }
 #endif
