@@ -251,7 +251,6 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
         session_data->need_poll_out = true;
         return NGHTTP2_ERR_WOULDBLOCK;
     } else if (stream_data->pipe_bytes < length) {
-        session_data->need_poll_out = true;
         return NGHTTP2_ERR_WOULDBLOCK;
     } else if (frame->data.padlen > 0) {
         uint8_t buffer[framehd_len+1];
