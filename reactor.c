@@ -242,20 +242,15 @@ reactor__enter_core(reactor_t * reactor) {
         if (reactor__flushable(reactor))
             reactor__flush(reactor);
 
-        while (!jump_queue_empty(&reactor->todos[2]) && !reactor__will_block(reactor, 2)) {
-            jump_chain_t * todo = jump_queue_dequeue(&reactor->todos[2]);
-            if (UNLIKELY(todo->fiber == reactor->current))
-                return;
-            jump_invoke(todo, reactor);
-            abort();
-        }
-
-        while (!jump_queue_empty(&reactor->todos[1]) && !reactor__will_block(reactor, 1)) {
-            jump_chain_t * todo = jump_queue_dequeue(&reactor->todos[1]);
-            if (UNLIKELY(todo->fiber == reactor->current))
-                return;
-            jump_invoke(todo, reactor);
-            abort();
+        size_t i = sizeof(reactor->todos)/sizeof(*reactor->todos);
+        while (--i) {
+            while (!jump_queue_empty(&reactor->todos[i]) && !reactor__will_block(reactor, i)) {
+                jump_chain_t * todo = jump_queue_dequeue(&reactor->todos[i]);
+                if (UNLIKELY(todo->fiber == reactor->current))
+                    return;
+                jump_invoke(todo, reactor);
+                abort();
+            }
         }
 
         while (!jump_queue_empty(&reactor->todos[0])) {
