@@ -207,7 +207,7 @@ reactor__flush(reactor_t * reactor) {
                 if (cqes[i]->flags & IORING_CQE_F_MORE) {
                     ++reactor->sqes;
                     ++reactor->tare;
-                } else {
+                } else if (todo->function) {
                     jump_queue_enqueue(&reactor->todos[0], todo);
                 }
             }
