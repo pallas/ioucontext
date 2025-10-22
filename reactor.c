@@ -400,6 +400,9 @@ reactor__reserve_sqes(reactor_t * reactor, size_t n) {
     if (UNLIKELY(reactor->queue_depth < n))
         abort();
 
+    if (UNLIKELY(sizeof(reactor->todos)/sizeof(*reactor->todos) <= n))
+        abort();
+
     while (reactor__will_block(reactor, n)) {
         if (reactor__todos_queued(reactor)) {
             reactor_defer(reactor, n);
