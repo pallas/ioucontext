@@ -253,40 +253,41 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
         return NGHTTP2_ERR_WOULDBLOCK;
     } else if (stream_data->pipe_bytes < length) {
         return NGHTTP2_ERR_WOULDBLOCK;
-    } else if (frame->data.padlen > 0) {
-        uint8_t buffer[framehd_len+1];
+    }
+
+    bool have_pad = frame->data.padlen > 0;
+    uint8_t buffer[framehd_len+1];
+    size_t buffer_len = framehd_len+have_pad;
+    if (have_pad) {
         memcpy(buffer, framehd, framehd_len);
         buffer[framehd_len] = frame->data.padlen - 1;
-        ssize_t n = RESTART(iou_send, session_data->reactor, session_data->fd, buffer, sizeof buffer, MSG_MORE);
-        if (n == -EAGAIN || n == -EWOULDBLOCK) {
-            session_data->need_poll_out = true;
-            return NGHTTP2_ERR_WOULDBLOCK;
-        }
-        if (n != sizeof buffer)
-            return NGHTTP2_ERR_CALLBACK_FAILURE;
-    } else {
-        ssize_t n = RESTART(iou_send, session_data->reactor, session_data->fd, framehd, framehd_len, MSG_MORE);
-        if (n == -EAGAIN || n == -EWOULDBLOCK) {
-            session_data->need_poll_out = true;
-            return NGHTTP2_ERR_WOULDBLOCK;
-        }
-        if (n != framehd_len)
-            return NGHTTP2_ERR_CALLBACK_FAILURE;
     }
 
-    ssize_t n = RESTART(iou_splice_offset, session_data->reactor, stream_data->pipe_out, NULL, session_data->fd, NULL, length, SPLICE_F_MOVE | (frame->data.padlen > 1 ? SPLICE_F_MORE : 0));
-    if (length != n)
+    static const uint8_t pad[255] = {0};
+    size_t pad_len = frame->data.padlen > 1 ? frame->data.padlen - 1 : 0;
+    assert(pad_len <= sizeof(pad));
+
+    ssize_t n = pad_len > 0
+        ? iou_output(session_data->reactor, session_data->fd, NULL
+            , iou_output_send(.buffer=have_pad ? buffer : framehd, .length=buffer_len)
+            , iou_output_splice(.fd_in=stream_data->pipe_out, .length=length)
+            , iou_output_send(.buffer=pad, .length=pad_len)
+            )
+        : iou_output(session_data->reactor, session_data->fd, NULL
+            , iou_output_send(.buffer=have_pad ? buffer : framehd, .length=buffer_len)
+            , iou_output_splice(.fd_in=stream_data->pipe_out, .length=length)
+            )
+        ;
+
+    if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR) {
+        session_data->need_poll_out = true;
+        return NGHTTP2_ERR_WOULDBLOCK;
+    } else if (n != buffer_len + length + pad_len) {
         return NGHTTP2_ERR_CALLBACK_FAILURE;
-
-    stream_data->pipe_bytes -= length;
-
-    if (frame->data.padlen > 1) {
-        static const uint8_t pad[255] = {0};
-        if (frame->data.padlen - 1 != RESTART(iou_send, session_data->reactor, session_data->fd, pad, frame->data.padlen - 1, stream_data->pipe_bytes ? MSG_MORE : 0))
-            return NGHTTP2_ERR_CALLBACK_FAILURE;
+    } else {
+        stream_data->pipe_bytes -= length;
+        return 0;
     }
-
-    return 0;
 }
 
 #define NV(NAME, VALUE) (nghttp2_nv){ \
