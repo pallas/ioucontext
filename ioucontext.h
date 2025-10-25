@@ -8,6 +8,7 @@
 #include "macros.h"
 #include "mutex.h"
 #include "operations.h"
+#include "output.h"
 #include "queue.h"
 #include "reactor.h"
 #include "semaphore.h"

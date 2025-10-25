@@ -25,6 +25,7 @@ set(${PROJECT_NAME}_OBJECTS
 	jump_queue
 	mutex
 	operations
+	output
 	queue
 	reactor
 	semaphore
@@ -47,6 +48,7 @@ set(${PROJECT_NAME}_HEADERS
 	macros
 	mutex
 	operations
+	output
 	queue
 	reactor
 	semaphore
