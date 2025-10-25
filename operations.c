@@ -91,16 +91,6 @@
     IOU_DELTA_FLAGS(reactor, delta, 0, operation __VA_OPT__(,) __VA_ARGS__); \
 })
 
-enum { registered_file_flag = 1<<30 };
-#define FD_FIXED(fd) ({ assert(AT_FDCWD != fd); (bool)(fd & registered_file_flag); })
-#define FD_VALUE(fd) ({ assert(AT_FDCWD != fd); (int)(fd & ~registered_file_flag); })
-#define FD_FLAGS(fd) ({ assert(AT_FDCWD != fd); FD_FIXED(fd) ? IOSQE_FIXED_FILE : 0; })
-#define FD_BUILD(fd) ({ assert(!FD_FIXED(fd)); (int)(fd | registered_file_flag); })
-
-#define DIRFD_FIXED(fd) ({ (bool)((AT_FDCWD != fd) && FD_FIXED(fd)); })
-#define DIRFD_VALUE(fd) ({ (int)((AT_FDCWD != fd) ? FD_VALUE(fd) : AT_FDCWD); })
-#define DIRFD_FLAGS(fd) ({ DIRFD_FIXED(fd) ? IOSQE_FIXED_FILE : 0; })
-
 int
 iou_accept(reactor_t * reactor, int fd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
     assert(addrlen || !addr);
