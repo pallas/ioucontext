@@ -18,7 +18,7 @@ ucontext_t * fiber_get(reactor_t *);
 #define reactor_fiber(function, reactor, ...) ({ \
     /* fprintf(stderr, "! %s(%s)\n", #function, #__VA_ARGS__); */ \
     typeof(function(reactor, ##__VA_ARGS__)) *_; \
-    makecontext(fiber_get(reactor), (void(*)())function, __VA_NUM_ARGS__(__VA_ARGS__) + 1, reactor, ##__VA_ARGS__); \
+    makecontext(fiber_get(reactor), (void(*)())function, __VA_NUM_ARGS__(void*, __VA_ARGS__) + 1, reactor, ##__VA_ARGS__); \
 })
 
 #ifdef __cplusplus

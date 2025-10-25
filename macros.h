@@ -11,10 +11,10 @@
 extern "C" {
 #endif
 
-#define __VA_NUM_ARGS__(...) ({ \
+#define __VA_NUM_ARGS__(TYPE, ...) ({ \
     _Pragma("GCC diagnostic push") \
     _Pragma("GCC diagnostic ignored \"-Wint-conversion\"") \
-    ((sizeof((const volatile void*[]){ NULL, ##__VA_ARGS__ })/sizeof(void*))-1); \
+    ((sizeof((const volatile TYPE[]){ (TYPE){ }, ##__VA_ARGS__ })/sizeof(TYPE))-1); \
     _Pragma("GCC diagnostic pop") \
 })
 
