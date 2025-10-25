@@ -1045,26 +1045,35 @@ iou_send(reactor_t * reactor, int socket, const void *buffer, size_t length, int
 ssize_t
 iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len) {
     VALGRIND_CHECK_MEM_IS_DEFINED(message, length);
-    VALGRIND_CHECK_MEM_IS_DEFINED(dest_addr, dest_len);
 
     enum { zero_copy_threshold = 1<<15 };
 
-    struct iovec iov = {
-        .iov_base = (void*)message,
-        .iov_len = length
-    };
+    assert(!dest_addr || dest_len);
+    if (!dest_addr) {
+        return length >= zero_copy_threshold
+            ? IOU_FLAGS(reactor, FD_FLAGS(socket), send_zc, FD_VALUE(socket), message, length, flags, 0)
+            : IOU_FLAGS(reactor, FD_FLAGS(socket), send, FD_VALUE(socket), message, length, flags)
+            ;
+    } else {
+        VALGRIND_CHECK_MEM_IS_DEFINED(dest_addr, dest_len);
 
-    struct msghdr msg = {
-        .msg_iov = &iov,
-        .msg_iovlen = 1,
-        .msg_name = (void*)dest_addr,
-        .msg_namelen = dest_len,
-    };
+        struct iovec iov = {
+            .iov_base = (void*)message,
+            .iov_len = length
+        };
 
-    return length >= zero_copy_threshold
-        ? IOU_FLAGS(reactor, FD_FLAGS(socket), sendmsg_zc, FD_VALUE(socket), &msg, flags)
-        : IOU_FLAGS(reactor, FD_FLAGS(socket), sendmsg, FD_VALUE(socket), &msg, flags)
-        ;
+        struct msghdr msg = {
+            .msg_iov = &iov,
+            .msg_iovlen = 1,
+            .msg_name = (void*)dest_addr,
+            .msg_namelen = dest_len,
+        };
+
+        return length >= zero_copy_threshold
+            ? IOU_FLAGS(reactor, FD_FLAGS(socket), sendmsg_zc, FD_VALUE(socket), &msg, flags)
+            : IOU_FLAGS(reactor, FD_FLAGS(socket), sendmsg, FD_VALUE(socket), &msg, flags)
+            ;
+    }
 }
 
 int
