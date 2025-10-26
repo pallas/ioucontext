@@ -91,8 +91,6 @@ iou_rand_callback(uint8_t *dest, size_t destlen) {
 static nghttp2_ssize
 iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
-    if (!session_data->want_read)
-        session_data->want_read = nghttp2_session_want_read(session);
     int result = RESTART(iou_send, session_data->reactor, session_data->fd, data, length, session_data->want_read ? MSG_DONTWAIT : 0);
     if ((result == -EAGAIN || result == -EWOULDBLOCK) || (result > 0 && result < length))
         session_data->need_poll_out = true;
