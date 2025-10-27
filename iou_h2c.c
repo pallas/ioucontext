@@ -26,6 +26,7 @@ typedef LIST_ENTRY(stream_data_s) stream_data_entry_t;
 
 typedef struct stream_data_s {
     int fd;
+    off_t fd_off;
     int pipe_in;
     int pipe_out;
     ssize_t pipe_bytes, pipe_max;
@@ -163,7 +164,7 @@ fd_read_callback(nghttp2_session *session, int32_t stream_id, uint8_t *buf, size
         return NGHTTP2_ERR_CALLBACK_FAILURE;
 
     if (stream_data->fd >= 0 && stream_data->pipe_in >= 0 && stream_data->pipe_bytes < stream_data->pipe_max/2) {
-        ssize_t n = RESTART(iou_splice_offset, session_data->reactor, stream_data->fd, NULL, stream_data->pipe_in, NULL, SSIZE_MAX, 0 | SPLICE_F_MOVE);
+        ssize_t n = RESTART(iou_splice_offset, session_data->reactor, stream_data->fd, &stream_data->fd_off, stream_data->pipe_in, NULL, SSIZE_MAX, 0 | SPLICE_F_MOVE);
         if (n > 0) {
             stream_data->pipe_bytes += n;
         } else if (n == 0) {
@@ -179,11 +180,13 @@ fd_read_callback(nghttp2_session *session, int32_t stream_id, uint8_t *buf, size
     }
 
     if (stream_data->fd >= 0 && stream_data->pipe_in < 0 && !stream_data->pipe_bytes) {
-        ssize_t n = RESTART(iou_read, session_data->reactor, stream_data->fd, buf, length);
+        ssize_t n = RESTART(iou_pread, session_data->reactor, stream_data->fd, buf, length, stream_data->fd_off);
         if (n == -EAGAIN || n == -EWOULDBLOCK)
             return NGHTTP2_ERR_PAUSE;
         else if (n <= 0)
             return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+
+        stream_data->fd_off += n;
 
         if (n < length)
             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
