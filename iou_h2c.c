@@ -36,7 +36,7 @@ typedef struct stream_data_s {
 typedef struct session_data_s {
     reactor_t *reactor;
     int fd;
-    int fd_sndbuf;
+    ssize_t fd_space;
     stream_data_list_t free_streams;
     stream_data_list_t inuse_streams;
     union {
@@ -92,18 +92,34 @@ iou_rand_callback(uint8_t *dest, size_t destlen) {
 static nghttp2_ssize
 iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
+
+    if (session_data->need_poll_out)
+        return NGHTTP2_ERR_WOULDBLOCK;
+
     int result = RESTART(iou_send, session_data->reactor, session_data->fd, data, length, session_data->want_read ? MSG_DONTWAIT : 0);
-    if ((result == -EAGAIN || result == -EWOULDBLOCK) || (result > 0 && result < length))
+
+    if (result == -EAGAIN || result == -EWOULDBLOCK) {
         session_data->need_poll_out = true;
-    return (result == -EAGAIN || result == -EWOULDBLOCK) ? NGHTTP2_ERR_WOULDBLOCK
-        : (result < 0) ? NGHTTP2_ERR_CALLBACK_FAILURE
-        : result
-        ;
+        return NGHTTP2_ERR_WOULDBLOCK;
+    } else if (result < 0) {
+        return NGHTTP2_ERR_CALLBACK_FAILURE;
+    }
+
+    if (session_data->fd_space >= 0) {
+        if (session_data->fd_space > length)
+            session_data->fd_space -= length;
+        else
+            session_data->fd_space = 0;
+    }
+
+    return result;
 }
 
 static nghttp2_ssize
 iou_recv_callback2(nghttp2_session *session, uint8_t *buf, size_t length, int flags, void *user_data) {
     session_data_t *session_data = (session_data_t *)user_data;
+    if (session_data->need_poll_in)
+        return NGHTTP2_ERR_WOULDBLOCK;
     if (!session_data->want_write)
         session_data->want_write = nghttp2_session_want_write(session);
     int result = RESTART(iou_recv, session_data->reactor, session_data->fd, buf, length, session_data->want_write ? MSG_DONTWAIT : 0);
@@ -244,15 +260,16 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
 
     enum { framehd_len = 9 };
 
-    int siocoutq = iou_siocoutq(session_data->reactor, session_data->fd);
-    if (session_data->fd_sndbuf < siocoutq + framehd_len + length + frame->data.padlen)
-        session_data->fd_sndbuf = iou_getsockopt_int(session_data->reactor, session_data->fd, SOL_SOCKET, SO_SNDBUF);
+    if (session_data->need_poll_out || stream_data->pipe_bytes < length)
+        return NGHTTP2_ERR_WOULDBLOCK;
 
-    if (session_data->fd_sndbuf < siocoutq + framehd_len + length + frame->data.padlen) {
-        session_data->need_poll_out = true;
-        return NGHTTP2_ERR_WOULDBLOCK;
-    } else if (stream_data->pipe_bytes < length) {
-        return NGHTTP2_ERR_WOULDBLOCK;
+    const size_t total_len = framehd_len + length + frame->data.padlen;
+    if (session_data->fd_space >= 0) {
+        if (session_data->fd_space < total_len)
+            session_data->fd_space = RESTART(iou_spaceout, session_data->reactor, session_data->fd);
+
+        if (session_data->fd_space < total_len)
+            return NGHTTP2_ERR_WOULDBLOCK;
     }
 
     bool have_pad = frame->data.padlen > 0;
@@ -279,15 +296,23 @@ iou_send_data_callback(nghttp2_session *session, nghttp2_frame *frame, const uin
             )
         ;
 
-    if (n == -EAGAIN || n == -EWOULDBLOCK || n == -EINTR) {
+    if (n == -EAGAIN || n == -EWOULDBLOCK) {
         session_data->need_poll_out = true;
         return NGHTTP2_ERR_WOULDBLOCK;
-    } else if (n != buffer_len + length + pad_len) {
+    } else if (n < 0) {
         return NGHTTP2_ERR_CALLBACK_FAILURE;
-    } else {
-        stream_data->pipe_bytes -= length;
-        return 0;
     }
+
+    if (session_data->fd_space >= 0) {
+        if (session_data->fd_space > total_len)
+            session_data->fd_space -= total_len;
+        else
+            session_data->fd_space = 0;
+    }
+
+    stream_data->pipe_bytes -= length;
+
+    return n != total_len ? NGHTTP2_ERR_CALLBACK_FAILURE : 0;
 }
 
 #define NV(NAME, VALUE) (nghttp2_nv){ \
@@ -451,7 +476,7 @@ fiber(reactor_t * reactor, int accept_fd) {
             process(reactor, &session_data, settings, sizeof(settings)/sizeof(*settings));
         }
         session_data.flags = 0;
-        session_data.fd_sndbuf = 0;
+        session_data.fd_space = 0;
 
         while (!LIST_EMPTY(&session_data.inuse_streams))
             stream_data_put(&session_data, LIST_FIRST(&session_data.inuse_streams));
