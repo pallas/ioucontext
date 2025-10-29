@@ -4,10 +4,12 @@
 #include "output.h"
 
 #include "macros-internal.h"
+#include "operations.h"
 #include "reactor-internal.h"
 #include "todo_null.h"
 
 #include <assert.h>
+#include <poll.h>
 
 ssize_t
 iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_outs, iou_output_t * const outs[]) {
@@ -30,10 +32,12 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
 
     const off_t offset = off_out && *off_out >= 0 ? *off_out : -1;
 
+    bool poll_first = false;
+
     size_t i_outs = 0;
     while (i_outs < n_outs) {
         enum { n_sqes_max = 3 };
-        const size_t x_outs = n_outs - i_outs;
+        const size_t x_outs = poll_first + (n_outs - i_outs);
         const size_t n = x_outs < n_sqes_max ? x_outs : n_sqes_max;
 
         todo_null_t todos[n];
@@ -41,9 +45,18 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
         reactor_reserve_sqes(reactor, n);
 
         for (size_t i = 0 ; i < n ; ++i) {
-            const iou_output_t *out = outs[i_outs+i];
             struct io_uring_sqe *sqe = reactor_sqe(reactor);
-            const bool more = i_outs + i < n_outs - 1;
+
+            if (!i && poll_first) {
+                io_uring_prep_poll_add(sqe, FD_VALUE(fd_out), POLLOUT);
+                io_uring_sqe_set_flags(sqe, FD_FLAGS(fd_out));
+                reactor_promise_nothing(reactor, sqe, &todos[i]);
+                continue;
+            }
+
+            const size_t p = i_outs + i - poll_first;
+            const iou_output_t *out = outs[p];
+            const bool more = p < n_outs - 1;
 
             switch (out->type) {
 
@@ -117,14 +130,37 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
         }
 
         for (size_t i = 0 ; i < n ; ++i) {
-            iou_output_t *out = outs[i_outs];
             ssize_t result = todos[i].jump.result;
+
+            if (!i && poll_first) {
+                if (UNLIKELY(result & POLLNVAL)) {
+                    abort();
+                } else if (UNLIKELY(result & POLLERR)) {
+                    return total ?: -iou_getsockopt_int(reactor, fd_out, SOL_SOCKET, SO_ERROR);
+                } else if (UNLIKELY(result & POLLHUP)) {
+                    return total ?: -EPIPE;
+                } else if (LIKELY(result & POLLOUT)) {
+                    poll_first = false;
+                    continue;
+                } else {
+                    continue;
+                }
+            }
 
             if (-EINTR == result) {
                 break;
+            } else if (-EAGAIN == result || -EWOULDBLOCK == result || -ECANCELED == result) {
+                if (!total)
+                    return -EAGAIN;
+
+                poll_first = true;
+                break;
             } else if (result < 0) {
-                return total > 0 ? total : result;
-            } else switch (out->type) {
+                return total ?: result;
+            }
+
+            iou_output_t *out = outs[i_outs];
+            switch (out->type) {
 
             case iou_output_none: {
                 ++i_outs;
@@ -139,6 +175,7 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
                 assert(result <= out->info_send.length);
                 out->info_send.length -= result;
                 if (out->info_send.length > 0) {
+                    poll_first = true;
                     i = n;
                     continue;
                 } else {
@@ -161,6 +198,7 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
                 assert(result <= out->info_splice.length);
                 out->info_splice.length -= result;
                 if (out->info_splice.length > 0) {
+                    poll_first = true;
                     i = n;
                     continue;
                 } else {
@@ -177,6 +215,7 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
                 assert(result <= out->info_write.length);
                 out->info_write.length -= result;
                 if (out->info_write.length > 0) {
+                    poll_first = true;
                     i = n;
                     continue;
                 } else {
