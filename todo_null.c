@@ -2,6 +2,7 @@
 #include "todo_null.h"
 
 #include <assert.h>
+#include <stddef.h>
 
 void
 make_todo_null(todo_null_t * todo) {
