@@ -212,6 +212,8 @@ iou_spaceout(reactor_t * reactor, int fd) {
     if (result < 0)
         return result;
 
+    VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(&sndbuf, sizeof sndbuf);
+
     if (siocoutq.jump.result < 0)
         return siocoutq.jump.result;
 
