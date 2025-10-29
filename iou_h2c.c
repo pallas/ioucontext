@@ -96,7 +96,10 @@ iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length,
     if (session_data->need_poll_out)
         return NGHTTP2_ERR_WOULDBLOCK;
 
-    int result = RESTART(iou_send, session_data->reactor, session_data->fd, data, length, session_data->want_read ? MSG_DONTWAIT : 0);
+    int result = RESTART(iou_send, session_data->reactor, session_data->fd, data, length, 0
+    | (session_data->want_read ? MSG_DONTWAIT : 0)
+    | (nghttp2_session_get_outbound_queue_size(session) ? MSG_MORE : 0)
+    );
 
     if (result == -EAGAIN || result == -EWOULDBLOCK) {
         session_data->need_poll_out = true;
