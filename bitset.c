@@ -145,6 +145,21 @@ bitset_has(const bitset_t *bitset) {
 }
 
 bool
+bitset_set(bitset_t *bitset, size_t bit) {
+    if (UNLIKELY(bit >= bitset->bits))
+        abort();
+
+    const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
+    const size_t i_value = bit / bitset_bits_per_value;
+    assert(i_value < n_values);
+    const size_t i_bit = bit % bitset_bits_per_value;
+    const bitset_value_t v_bit = bitset_value_bit(i_bit);
+    bool lit = !(bitset->values[i_value] & v_bit);
+    bitset->values[i_value] &= ~v_bit;
+    return lit;
+}
+
+bool
 bitset_lit(const bitset_t *bitset, size_t bit) {
     if (UNLIKELY(bit >= bitset->bits))
         return false;

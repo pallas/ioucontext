@@ -20,6 +20,7 @@ HIDDEN bitset_t * bitset(size_t);
 HIDDEN ssize_t bitset_get(bitset_t *);
 HIDDEN bool bitset_any(const bitset_t *);
 HIDDEN size_t bitset_has(const bitset_t *);
+HIDDEN bool bitset_set(bitset_t *, size_t);
 HIDDEN bool bitset_lit(const bitset_t *, size_t);
 HIDDEN size_t bitset_max(const bitset_t *);
 HIDDEN void bitset_put(bitset_t *, size_t);
