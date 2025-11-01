@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef uintmax_t bitset_value_t;
+typedef unsigned long long bitset_value_t;
 
 enum {
     bitset_bits_per_value = sizeof(bitset_value_t) * CHAR_BIT,
