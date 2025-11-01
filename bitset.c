@@ -86,6 +86,7 @@ bitset_get(bitset_t *bitset) {
         bitset->hint = i_value;
         return i_value * bitset_bits_per_value + i_bit;
     }
+    bitset->hint = n_values;
     return -1;
 }
 
