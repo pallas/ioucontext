@@ -123,6 +123,17 @@ bitset_two(bitset_t *bitset) {
     return -1;
 }
 
+bool
+bitset_any(const bitset_t *bitset) {
+    assert(bitset__valid_hint(bitset));
+    const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
+    for (size_t *hint = (/* const */ size_t *)(&bitset->hint) ; *hint < n_values ; ++*hint)
+        if (bitset->values[*hint])
+            return true;
+
+    return false;
+}
+
 size_t
 bitset_has(const bitset_t *bitset) {
     size_t has = 0;
