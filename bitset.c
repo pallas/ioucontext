@@ -60,7 +60,7 @@ bitset_get(bitset_t *bitset) {
         return -1;
     const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
     for (size_t i_value = bitset->hint ; i_value < n_values ; ++i_value) {
-        bitset_value_t value = bitset->values[i_value];
+        const bitset_value_t value = bitset->values[i_value];
         if (!value)
             continue;
         const size_t i_bit = __builtin_ctzll(value);
@@ -81,7 +81,7 @@ bitset_two(bitset_t *bitset) {
         return -1;
     const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
     for (size_t i_value = bitset->hint ; i_value < n_values ; ++i_value) {
-        bitset_value_t value = bitset->values[i_value];
+        const bitset_value_t value = bitset->values[i_value];
         if (!value)
             continue;
 
