@@ -193,4 +193,93 @@ bitset_put(bitset_t *bitset, size_t bit) {
     bitset->values[i_value] |= v_bit;
 }
 
+static size_t
+bitset__rank0(bitset_t * bitset, size_t bit) {
+    assert(bitset__valid_hint(bitset));
+    if (UNLIKELY(bit > bitset->bits))
+        bit = bitset->bits;
+
+    const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
+    const size_t i_value = bit / bitset_bits_per_value;
+    assert(i_value <= n_values);
+    if (bitset->hint > i_value)
+        return 0;
+
+    size_t zeros = 0;
+    for (size_t i = bitset->hint ; i < i_value ; ++i)
+        zeros += __builtin_popcountll(bitset->values[i]);
+
+    if (i_value < n_values) {
+        const size_t i_bit = bit % bitset_bits_per_value;
+        const bitset_value_t v_bit = bitset_value_bit(i_bit);
+        const bitset_value_t m_bit = v_bit - 1;
+
+        zeros += __builtin_popcountll(bitset->values[i_value] & m_bit);
+    }
+
+    return zeros;
+}
+
+size_t
+bitset_rank0(bitset_t * bitset, size_t bit) {
+    return bitset__rank0(bitset, bit);
+}
+
+size_t
+bitset_rank1(bitset_t * bitset, size_t bit) {
+    return bit - bitset__rank0(bitset, bit);
+}
+
+static size_t
+bitset__expand_bits(bitset_value_t value, size_t skip) {
+    while (skip-->0)
+        value &= value-1;
+    return __builtin_ctzll(value);
+}
+
+ssize_t
+bitset_select0(bitset_t * bitset, size_t index) {
+    assert(bitset__valid_hint(bitset));
+    if (UNLIKELY(index >= bitset->bits))
+        return -1;
+
+    const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
+    for (size_t i_value = bitset->hint ; i_value < n_values ; ++i_value) {
+        const bitset_value_t value = bitset->values[i_value];
+        const size_t bits = value ? __builtin_popcountll(value) : 0;
+        if (index < bits)
+            return i_value * bitset_bits_per_value + bitset__expand_bits(value, index);
+
+        index -= bits;
+    }
+
+    return -1;
+}
+
+ssize_t
+bitset_select1(bitset_t * bitset, size_t index) {
+    assert(bitset__valid_hint(bitset));
+    if (UNLIKELY(index >= bitset->bits))
+        return -1;
+
+    const size_t hints = bitset->hint * bitset_bits_per_value;
+    if (index < hints)
+        return index;
+
+    index -= hints;
+
+    const size_t n_values = (bitset->bits+bitset_bias_per_value)/bitset_bits_per_value;
+    for (size_t i_value = bitset->hint ; i_value < n_values ; ++i_value) {
+        const bitset_value_t value = ~bitset->values[i_value] ;
+        const size_t bits = value ? __builtin_popcountll(value) : 0;
+        if (index < bits) {
+            const size_t bit = i_value * bitset_bits_per_value + bitset__expand_bits(value, index);
+            return bit < bitset->bits ? bit : -1;
+        }
+        index -= bits;
+    }
+
+    return -1;
+}
+
 //

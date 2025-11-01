@@ -26,6 +26,12 @@ HIDDEN size_t bitset_max(const bitset_t *);
 HIDDEN void bitset_put(bitset_t *, size_t);
 HIDDEN ssize_t bitset_two(bitset_t *);
 
+HIDDEN size_t bitset_rank0(bitset_t *, size_t);
+HIDDEN size_t bitset_rank1(bitset_t *, size_t);
+
+HIDDEN ssize_t bitset_select0(bitset_t *, size_t);
+HIDDEN ssize_t bitset_select1(bitset_t *, size_t);
+
 #ifdef __cplusplus
 }
 #endif
