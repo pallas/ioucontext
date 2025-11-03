@@ -275,12 +275,8 @@ reactor__enter_core(reactor_t * reactor) {
         }
 
         if (reactor__inflight(reactor) && !io_uring_cq_ready(&reactor->ring)) {
-            if (reactor->tare != reactor->sqes) {
-                reactor->tare = reactor->sqes;
-                io_uring_submit_and_wait(&reactor->ring, 1);
-            } else {
-                io_uring_get_events(&reactor->ring);
-            }
+            reactor->tare = reactor->sqes;
+            io_uring_submit_and_wait(&reactor->ring, 1);
         }
 
     }
