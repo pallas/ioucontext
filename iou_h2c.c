@@ -177,7 +177,7 @@ fd_read_callback(nghttp2_session *session, int32_t stream_id, uint8_t *buf, size
     session_data_t *session_data = (session_data_t *)user_data;
     stream_data_t *stream_data = (stream_data_t *)source->ptr;
 
-    const ssize_t splice_threshold = 3<<12; /* 12kB */
+    const ssize_t splice_threshold = 1<<13; /* 8kB */
 
     if (stream_data->fd < 0 && !stream_data->pipe_bytes)
         return NGHTTP2_ERR_CALLBACK_FAILURE;
