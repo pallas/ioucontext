@@ -24,7 +24,7 @@ typedef struct jump_chain_s {
     struct jump_chain_s * next;
     jump_function function;
     fiber_t *fiber;
-    volatile jump_result_t result;
+    jump_result_t result;
 } jump_chain_t;
 
 HIDDEN noreturn void jump_invoke(jump_chain_t *, reactor_t *);

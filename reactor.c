@@ -294,7 +294,7 @@ reactor_enter_core(reactor_t * reactor) {
     reactor__enter_core(reactor);
 }
 
-static __attribute__((noipa)) void
+static void
 reactor_sigjmp_core(reactor_t * reactor, todo_sigjmp_t * todo) {
     if (!sigsetjmp(*make_todo_sigjmp(todo, reactor->current), false))
         reactor__enter_core(reactor);
@@ -397,7 +397,7 @@ reactor_schedule(reactor_t * reactor, jump_chain_t * todo) {
     jump_queue_enqueue(&reactor->todos[0], todo);
 }
 
-static __attribute__((noipa)) void
+static void
 reactor_defer(reactor_t * reactor, unsigned n) {
     assert(n < sizeof(reactor->todos)/sizeof(*reactor->todos));
     todo_sigjmp_t todo;
