@@ -68,7 +68,7 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
             case iou_output_send: {
                 if (UNLIKELY(offset >= 0))
                     return total ?: -ENOSYS;
-                enum { zero_copy_threshold = 1<<13 };
+                enum { zero_copy_threshold = 1<<15 };
                 if (out->info_send.length >= zero_copy_threshold) {
                     io_uring_prep_send_zc(sqe
                     , FD_VALUE(fd_out)

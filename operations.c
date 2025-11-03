@@ -1036,7 +1036,7 @@ ssize_t
 iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len) {
     VALGRIND_CHECK_MEM_IS_DEFINED(message, length);
 
-    enum { zero_copy_threshold = 1<<13 };
+    enum { zero_copy_threshold = 1<<15 };
 
     assert(!dest_addr || dest_len);
     if (!dest_addr) {
