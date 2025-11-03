@@ -32,24 +32,36 @@ getrlimit_nofile() {
 static void
 reactor_set(reactor_t * reactor) {
     struct io_uring_params params = {0};
-    params.flags |= IORING_SETUP_SQPOLL;
     params.flags |= IORING_SETUP_SUBMIT_ALL;
     params.flags |= IORING_SETUP_SINGLE_ISSUER;
     params.flags |= IORING_SETUP_NO_SQARRAY;
 
-    params.sq_thread_idle = 100;
+    const char * env_model = getenv("IOUCONTEXT_MODEL") ?: "taskrun";
 
-    cpu_set_t cpu_set;
-    CPU_ZERO_S(sizeof(cpu_set_t), &cpu_set);
-    TRY(sched_getaffinity, 0, sizeof(cpu_set_t), &cpu_set);
-    if (1==CPU_COUNT_S(sizeof(cpu_set_t), &cpu_set)) {
-        for (int i = 0 ; i < CPU_SETSIZE ; ++i) {
-            if (CPU_ISSET_S(i, sizeof(cpu_set_t), &cpu_set)) {
-                params.flags |= IORING_SETUP_SQ_AFF;
-                params.sq_thread_cpu = i;
-                break;
+    if (!strcmp(env_model, "taskrun")) {
+        params.flags |= IORING_SETUP_COOP_TASKRUN;
+        params.flags |= IORING_SETUP_TASKRUN_FLAG;
+        params.flags |= IORING_SETUP_DEFER_TASKRUN;
+    } else if (!strcmp(env_model, "basic")) {
+        /* ... */
+    } else if (!strcmp(env_model, "sqpoll")) {
+        params.flags |= IORING_SETUP_SQPOLL;
+        params.sq_thread_idle = 100;
+
+        cpu_set_t cpu_set;
+        CPU_ZERO_S(sizeof(cpu_set_t), &cpu_set);
+        TRY(sched_getaffinity, 0, sizeof(cpu_set_t), &cpu_set);
+        if (1==CPU_COUNT_S(sizeof(cpu_set_t), &cpu_set)) {
+            for (int i = 0 ; i < CPU_SETSIZE ; ++i) {
+                if (CPU_ISSET_S(i, sizeof(cpu_set_t), &cpu_set)) {
+                    params.flags |= IORING_SETUP_SQ_AFF;
+                    params.sq_thread_cpu = i;
+                    break;
+                }
             }
         }
+    } else {
+        abort();
     }
 
     const char * env_queue_depth = getenv("IOUCONTEXT_QUEUE_DEPTH");
