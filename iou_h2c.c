@@ -427,7 +427,6 @@ session_io(nghttp2_session *session, session_data_t * session_data) {
             if ((result = nghttp2_session_send(session)))
                 return result;
 
-            session_data->want_read = nghttp2_session_want_read(session);
             session_data->want_write = nghttp2_session_want_write(session);
         }
     }
