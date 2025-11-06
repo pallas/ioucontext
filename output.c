@@ -131,13 +131,13 @@ iou__n_output(reactor_t * reactor, int fd_out, const off_t *off_out, size_t n_ou
                     poll_first = false;
                     continue;
                 } else {
-                    continue;
+                    break;
                 }
             }
 
-            if (-EINTR == result) {
+            if (-EINTR == result || -ECANCELED == result) {
                 break;
-            } else if (-EAGAIN == result || -EWOULDBLOCK == result || -ECANCELED == result) {
+            } else if (-EAGAIN == result || -EWOULDBLOCK == result) {
                 if (!total)
                     return -EAGAIN;
 
