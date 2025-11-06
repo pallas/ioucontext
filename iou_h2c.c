@@ -97,7 +97,7 @@ iou_send_callback2(nghttp2_session *session, const uint8_t *data, size_t length,
         return NGHTTP2_ERR_WOULDBLOCK;
 
     int result = RESTART(iou_send, session_data->reactor, session_data->fd, data, length, 0
-    | (session_data->want_read ? MSG_DONTWAIT : 0)
+    | (session_data->want_read ? MSG_DONTWAIT : MSG_WAITALL)
     | (nghttp2_session_get_outbound_queue_size(session) ? MSG_MORE : 0)
     );
 
