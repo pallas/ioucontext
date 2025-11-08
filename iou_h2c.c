@@ -224,13 +224,6 @@ fd_read_callback(nghttp2_session *session, int32_t stream_id, uint8_t *buf, size
         stream_data->pipe_bytes -= n;
 
         return n;
-    } else if (stream_data->pipe_bytes >= stream_data->pipe_max/2) {
-        *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
-        if (stream_data->fd < 0)
-            *data_flags |= NGHTTP2_DATA_FLAG_EOF;
-        return stream_data->pipe_bytes;
-    } else if (stream_data->fd >= 0) {
-        return NGHTTP2_ERR_PAUSE;
     } else if (stream_data->pipe_bytes >= splice_threshold) {
         *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
         if (stream_data->fd < 0)
