@@ -502,6 +502,7 @@ thread(void *context) {
     TRY(sched_setaffinity, 0, sizeof(cpu_set_t), &cpu_set);
 
     reactor_t *reactor = reactor_get();
+    reactor_max_workers(reactor, 1, 1);
 
     int accept_fd = iou_fd_register(reactor, info->accept_fd);
     for (unsigned i = 0 ; i < 64 ; ++i)
