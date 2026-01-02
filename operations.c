@@ -668,6 +668,20 @@ iou_futex_wake32_bitset_fast(reactor_t * reactor, uint32_t *futex, uint32_t mask
     IOU_FAKE(reactor, futex_wake, futex, n, mask, 0 | FUTEX_32 | FUTEX_PRIVATE_FLAG, 0);
 }
 
+int
+iou_getpeername(reactor_t * reactor, int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+    assert(addrlen || !addr);
+
+    if (addr) VALGRIND_CHECK_MEM_IS_ADDRESSABLE(addr, *addrlen);
+
+    int result = IOU_FLAGS(reactor, FD_FLAGS(sockfd), cmd_getsockname, FD_VALUE(sockfd), addr, addrlen, 1);
+
+    if (addr && result >= 0)
+        VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(addr, *addrlen);
+
+    return result;
+}
+
 ssize_t
 iou_getrandom(reactor_t * reactor, char *buf, size_t buflen) {
     if (reactor->urandomfd < 0) {
@@ -677,6 +691,20 @@ iou_getrandom(reactor_t * reactor, char *buf, size_t buflen) {
     }
 
     return RESTART(iou_read, reactor, reactor->urandomfd, buf, buflen);
+}
+
+int
+iou_getsockname(reactor_t * reactor, int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+    assert(addrlen || !addr);
+
+    if (addr) VALGRIND_CHECK_MEM_IS_ADDRESSABLE(addr, *addrlen);
+
+    int result = IOU_FLAGS(reactor, FD_FLAGS(sockfd), cmd_getsockname, FD_VALUE(sockfd), addr, addrlen, 0);
+
+    if (addr && result >= 0)
+        VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE(addr, *addrlen);
+
+    return result;
 }
 
 int
