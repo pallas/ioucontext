@@ -1057,7 +1057,9 @@ iou_scanf(reactor_t * reactor, int fd, const char *format, ...) {
 
 ssize_t
 iou_send(reactor_t * reactor, int socket, const void *buffer, size_t length, int flags) {
-    return iou_sendto(reactor, socket, buffer, length, flags, NULL, 0);
+    VALGRIND_CHECK_MEM_IS_DEFINED(buffer, length);
+
+    return IOU_FLAGS(reactor, FD_FLAGS(socket), send, FD_VALUE(socket), buffer, length, flags);
 }
 
 ssize_t
@@ -1065,25 +1067,9 @@ iou_sendto(reactor_t * reactor, int socket, const void *message, size_t length, 
     VALGRIND_CHECK_MEM_IS_DEFINED(message, length);
 
     assert(!dest_addr || dest_len);
-    if (!dest_addr) {
-        return IOU_FLAGS(reactor, FD_FLAGS(socket), send, FD_VALUE(socket), message, length, flags);
-    } else {
-        VALGRIND_CHECK_MEM_IS_DEFINED(dest_addr, dest_len);
+    if (dest_addr) VALGRIND_CHECK_MEM_IS_DEFINED(dest_addr, dest_len);
 
-        struct iovec iov = {
-            .iov_base = (void*)message,
-            .iov_len = length
-        };
-
-        struct msghdr msg = {
-            .msg_iov = &iov,
-            .msg_iovlen = 1,
-            .msg_name = (void*)dest_addr,
-            .msg_namelen = dest_len,
-        };
-
-        return IOU_FLAGS(reactor, FD_FLAGS(socket), sendmsg, FD_VALUE(socket), &msg, flags);
-    }
+    return IOU_FLAGS(reactor, FD_FLAGS(socket), sendto, FD_VALUE(socket), message, length, flags, dest_addr, dest_len);
 }
 
 int
